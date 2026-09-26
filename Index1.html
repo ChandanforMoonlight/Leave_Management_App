@@ -1,0 +1,5814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Leave Management System</title>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      background: #f4f6f9;
+      color: #1f2937;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font-family: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    /* =========================
+       LOGIN
+    ========================= */
+
+    .login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1d4ed8, #2563eb, #3b82f6);
+      padding: 20px;
+    }
+
+    .login-box {
+      width: 100%;
+      max-width: 420px;
+      background: white;
+      border-radius: 18px;
+      padding: 35px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+    }
+
+    .login-logo {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 15px;
+      border-radius: 16px;
+      background: #2563eb;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .login-box h1 {
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .login-subtitle {
+      text-align: center;
+      color: #6b7280;
+      margin-bottom: 28px;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 9px;
+      padding: 11px 12px;
+      outline: none;
+      font-size: 14px;
+      background: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.10);
+    }
+
+    .login-btn {
+      width: 100%;
+      border: none;
+      border-radius: 9px;
+      padding: 12px;
+      background: #2563eb;
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    .login-btn:hover {
+      background: #1d4ed8;
+    }
+
+    .login-message {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 13px;
+      color: #dc2626;
+      min-height: 18px;
+    }
+
+    /* =========================
+       APP
+    ========================= */
+
+    .app {
+      display: none;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 245px;
+      background: #111827;
+      color: white;
+      padding: 20px 14px;
+      overflow-y: auto;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 8px 10px 22px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 16px;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: #2563eb;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    .brand-text {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 12px;
+      margin-bottom: 4px;
+      border-radius: 8px;
+      color: #d1d5db;
+      font-size: 14px;
+      transition: 0.2s;
+      cursor: pointer;
+    }
+
+    .nav-item:hover {
+      background: #1f2937;
+      color: white;
+    }
+
+    .nav-item.active {
+      background: #2563eb;
+      color: white;
+    }
+
+    .nav-icon {
+      width: 22px;
+      text-align: center;
+    }
+
+    .main {
+      margin-left: 245px;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      height: 70px;
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .page-title {
+      font-size: 21px;
+      font-weight: 700;
+    }
+
+    .user-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-info {
+      text-align: right;
+    }
+
+    .user-name {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .user-role {
+      font-size: 12px;
+      color: #6b7280;
+      text-transform: capitalize;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #2563eb;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+
+    .content {
+      padding: 28px;
+    }
+
+    /* =========================
+       COMMON
+    ========================= */
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      margin-bottom: 18px;
+    }
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-success {
+      background: #16a34a;
+      color: white;
+    }
+
+    .btn-danger {
+      background: #dc2626;
+      color: white;
+    }
+
+    .btn-warning {
+      background: #d97706;
+      color: white;
+    }
+
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .btn-sm {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    /* =========================
+       DASHBOARD
+    ========================= */
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-bottom: 25px;
+    }
+
+    .stat-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .stat-label {
+      color: #6b7280;
+      font-size: 13px;
+      margin-bottom: 9px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .stat-blue {
+      border-left: 4px solid #2563eb;
+    }
+
+    .stat-green {
+      border-left: 4px solid #16a34a;
+    }
+
+    .stat-orange {
+      border-left: 4px solid #d97706;
+    }
+
+    .stat-red {
+      border-left: 4px solid #dc2626;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 20px;
+    }
+
+    /* =========================
+       TABLE
+    ========================= */
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 650px;
+    }
+
+    th,
+    td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    th {
+      background: #f9fafb;
+      color: #374151;
+      font-weight: 700;
+    }
+
+    td {
+      color: #4b5563;
+    }
+
+    /* =========================
+       BADGES
+    ========================= */
+
+    .badge {
+      display: inline-block;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .badge-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-approved {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge-rejected {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .badge-cancelled {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .badge-active {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    /* =========================
+       FORM GRID
+    ========================= */
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    /* =========================
+       CALENDAR
+    ========================= */
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      border-top: 1px solid #e5e7eb;
+      border-left: 1px solid #e5e7eb;
+    }
+
+    .calendar-day-name,
+    .calendar-day {
+      min-height: 90px;
+      border-right: 1px solid #e5e7eb;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 8px;
+    }
+
+    .calendar-day-name {
+      min-height: auto;
+      background: #f9fafb;
+      font-weight: 700;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .calendar-date {
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .calendar-event {
+      font-size: 10px;
+      padding: 3px 5px;
+      border-radius: 4px;
+      margin-top: 3px;
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .calendar-holiday {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    /* =========================
+       NOTIFICATIONS
+    ========================= */
+
+    .notification {
+      display: flex;
+      gap: 12px;
+      padding: 14px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .notification:last-child {
+      border-bottom: none;
+    }
+
+    .notification-dot {
+      width: 9px;
+      height: 9px;
+      background: #2563eb;
+      border-radius: 50%;
+      margin-top: 5px;
+      flex-shrink: 0;
+    }
+
+    .notification-title {
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .notification-message {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .notification-date {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 5px;
+    }
+
+    /* =========================
+       EMPTY STATE
+    ========================= */
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #9ca3af;
+    }
+
+    .empty-icon {
+      font-size: 35px;
+      margin-bottom: 10px;
+    }
+
+    /* =========================
+       MODAL
+    ========================= */
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 650px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: white;
+      border-radius: 14px;
+      padding: 24px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      border: none;
+      background: transparent;
+      font-size: 25px;
+      color: #6b7280;
+    }
+
+    /* =========================
+       TOAST
+    ========================= */
+
+    .toast {
+      position: fixed;
+      right: 25px;
+      bottom: 25px;
+      background: #111827;
+      color: white;
+      padding: 13px 17px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+      z-index: 200;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .toast.show {
+      display: block;
+    }
+
+    /* =========================
+       MOBILE
+    ========================= */
+
+    .mobile-menu {
+      display: none;
+      border: none;
+      background: transparent;
+      font-size: 23px;
+      margin-right: 12px;
+    }
+
+    @media (max-width: 1000px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 750px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: 0.25s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .main {
+        margin-left: 0;
+      }
+
+      .mobile-menu {
+        display: inline-block;
+      }
+
+      .content {
+        padding: 18px;
+      }
+
+      .topbar {
+        padding: 0 15px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .full-width {
+        grid-column: auto;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .user-info {
+        display: none;
+      }
+
+      .calendar-day {
+        min-height: 65px;
+        padding: 5px;
+      }
+
+      .calendar-event {
+        font-size: 8px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- =====================================================
+       LOGIN SCREEN
+  ====================================================== -->
+
+  <div id="loginScreen" class="login-screen">
+
+    <div class="login-box">
+
+      <div class="login-logo">LM</div>
+
+      <h1>Leave Management</h1>
+
+      <div class="login-subtitle">
+        Employee Leave Management System
+      </div>
+
+      <form id="loginForm">
+
+        <div class="form-group">
+          <label for="loginEmail">Email</label>
+          <input
+            type="email"
+            id="loginEmail"
+            placeholder="Enter your email"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input
+            type="password"
+            id="loginPassword"
+            placeholder="Enter your password"
+            required
+          >
+        </div>
+
+        <button type="submit" class="login-btn">
+          Login
+        </button>
+
+        <div id="loginMessage" class="login-message"></div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       MAIN APP
+  ====================================================== -->
+
+  <div id="app" class="app">
+
+    <!-- SIDEBAR -->
+
+    <aside id="sidebar" class="sidebar">
+
+      <div class="brand">
+        <div class="brand-icon">LM</div>
+        <div class="brand-text">Leave Management</div>
+      </div>
+
+      <div class="nav-item active" data-page="dashboard">
+        <span class="nav-icon">📊</span>
+        <span>Dashboard</span>
+      </div>
+
+      <div class="nav-item" data-page="applyLeave">
+        <span class="nav-icon">📝</span>
+        <span>Apply Leave</span>
+      </div>
+
+      <div class="nav-item" data-page="myLeaves">
+        <span class="nav-icon">📋</span>
+        <span>My Leaves</span>
+      </div>
+
+      <div class="nav-item" data-page="calendar">
+        <span class="nav-icon">📅</span>
+        <span>Calendar</span>
+      </div>
+
+      <div class="nav-item manager-admin-only" data-page="approvals">
+        <span class="nav-icon">✅</span>
+        <span>Approvals</span>
+      </div>
+
+      <div class="nav-item manager-admin-only" data-page="employees">
+        <span class="nav-icon">👥</span>
+        <span>Employees</span>
+      </div>
+
+      <div class="nav-item admin-only" data-page="leaveTypes">
+        <span class="nav-icon">🏷️</span>
+        <span>Leave Types</span>
+      </div>
+
+      <div class="nav-item admin-only" data-page="holidays">
+        <span class="nav-icon">🎉</span>
+        <span>Holidays</span>
+      </div>
+
+      <div class="nav-item manager-admin-only" data-page="reports">
+        <span class="nav-icon">📈</span>
+        <span>Reports</span>
+      </div>
+
+      <div class="nav-item" data-page="notifications">
+        <span class="nav-icon">🔔</span>
+        <span>Notifications</span>
+      </div>
+
+      <div class="nav-item admin-only" data-page="settings">
+        <span class="nav-icon">⚙️</span>
+        <span>Settings</span>
+      </div>
+
+      <div
+        class="nav-item"
+        id="logoutBtn"
+        style="margin-top:20px;"
+      >
+        <span class="nav-icon">🚪</span>
+        <span>Logout</span>
+      </div>
+
+    </aside>
+
+
+    <!-- MAIN -->
+
+    <main class="main">
+
+      <!-- TOPBAR -->
+
+      <header class="topbar">
+
+        <div style="display:flex;align-items:center;">
+
+          <button
+            id="mobileMenuBtn"
+            class="mobile-menu"
+            type="button"
+          >
+            ☰
+          </button>
+
+          <div id="pageTitle" class="page-title">
+            Dashboard
+          </div>
+
+        </div>
+
+        <div class="user-area">
+
+          <div class="user-info">
+            <div id="topUserName" class="user-name">
+              User
+            </div>
+
+            <div id="topUserRole" class="user-role">
+              Employee
+            </div>
+          </div>
+
+          <div id="topAvatar" class="avatar">
+            U
+          </div>
+
+        </div>
+
+      </header>
+
+
+      <!-- CONTENT -->
+
+      <section class="content">
+
+
+        <!-- =================================================
+             DASHBOARD
+        ================================================== -->
+
+        <div id="page-dashboard" class="page active">
+
+          <div class="stats-grid">
+
+            <div class="stat-card stat-blue">
+              <div class="stat-label">Total Leave Days</div>
+              <div id="statTotal" class="stat-value">0</div>
+            </div>
+
+            <div class="stat-card stat-green">
+              <div class="stat-label">Approved</div>
+              <div id="statApproved" class="stat-value">0</div>
+            </div>
+
+            <div class="stat-card stat-orange">
+              <div class="stat-label">Pending</div>
+              <div id="statPending" class="stat-value">0</div>
+            </div>
+
+            <div class="stat-card stat-red">
+              <div class="stat-label">Rejected</div>
+              <div id="statRejected" class="stat-value">0</div>
+            </div>
+
+          </div>
+
+
+          <div class="dashboard-grid">
+
+            <div class="card">
+
+              <div class="card-header">
+                <div class="card-title">Recent Leave Requests</div>
+
+                <button
+                  class="btn btn-primary btn-sm"
+                  onclick="showPage('myLeaves')"
+                >
+                  View All
+                </button>
+              </div>
+
+              <div class="table-wrapper">
+
+                <table>
+
+                  <thead>
+                    <tr>
+                      <th>Leave Type</th>
+                      <th>From</th>
+                      <th>To</th>
+                      <th>Days</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+
+                  <tbody id="dashboardLeavesTable">
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            </div>
+
+
+            <div class="card">
+
+              <div class="card-header">
+                <div class="card-title">Leave Balance</div>
+              </div>
+
+              <div id="dashboardBalances">
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- =================================================
+             APPLY LEAVE
+        ================================================== -->
+
+        <div id="page-applyLeave" class="page">
+
+          <div class="card">
+
+            <div class="card-header">
+              <div>
+                <div class="card-title">Apply for Leave</div>
+                <div style="font-size:12px;color:#6b7280;margin-top:4px;">
+                  Submit a new leave request
+                </div>
+              </div>
+            </div>
+
+
+            <form id="leaveForm">
+
+              <div class="form-grid">
+
+                <div class="form-group">
+
+                  <label>Leave Type</label>
+
+                  <select id="leaveType" required>
+                    <option value="">Select Leave Type</option>
+                  </select>
+
+                </div>
+
+
+                <div class="form-group">
+
+                  <label>Duration</label>
+
+                  <select id="durationType" required>
+
+                    <option value="full_day">
+                      Full Day
+                    </option>
+
+                    <option value="first_half">
+                      First Half
+                    </option>
+
+                    <option value="second_half">
+                      Second Half
+                    </option>
+
+                  </select>
+
+                </div>
+
+
+                <div class="form-group">
+
+                  <label>From Date</label>
+
+                  <input
+                    type="date"
+                    id="fromDate"
+                    required
+                  >
+
+                </div>
+
+
+                <div class="form-group">
+
+                  <label>To Date</label>
+
+                  <input
+                    type="date"
+                    id="toDate"
+                    required
+                  >
+
+                </div>
+
+
+                <div class="form-group full-width">
+
+                  <label>Reason</label>
+
+                  <textarea
+                    id="leaveReason"
+                    rows="4"
+                    placeholder="Enter reason for leave"
+                    required
+                  ></textarea>
+
+                </div>
+
+
+                <div class="form-group full-width">
+
+                  <label>Attachment</label>
+
+                  <input
+                    type="file"
+                    id="leaveAttachment"
+                  >
+
+                </div>
+
+              </div>
+
+
+              <div class="form-actions">
+
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  onclick="showPage('dashboard')"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  class="btn btn-primary"
+                >
+                  Submit Leave
+                </button>
+
+              </div>
+
+            </form>
+
+          </div>
+
+        </div>
+
+
+        <!-- =================================================
+             MY LEAVES
+        ================================================== -->
+
+        <div id="page-myLeaves" class="page">
+
+          <div class="card">
+
+            <div class="card-header">
+
+              <div class="card-title">
+                My Leave Requests
+              </div>
+
+              <button
+                class="btn btn-primary"
+                onclick="showPage('applyLeave')"
+              >
+                + Apply Leave
+              </button>
+
+            </div>
+
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+                  <tr>
+                    <th>Leave Type</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Days</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+
+                <tbody id="myLeavesTable">
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- =================================================
+             CALENDAR
+        ================================================== -->
+
+        <div id="page-calendar" class="page">
+
+          <div class="card">
+
+            <div class="card-header">
+
+              <div class="card-title">
+                Leave Calendar
+              </div>
+
+              <div style="display:flex;gap:8px;">
+
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="prevMonthBtn"
+                >
+                  ←
+                </button>
+
+                <div
+                  id="calendarMonth"
+                  style="padding:7px 10px;font-size:13px;font-weight:700;"
+                ></div>
+
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="nextMonthBtn"
+                >
+                  →
+                </button>
+
+              </div>
+
+            </div>
+
+            <div id="calendarContainer">
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- =================================================
+             APPROVALS
+        ================================================== -->
+
+        <div id="page-approvals" class="page">
+
+          <div class="card">
+
+            <div class="card-header">
+
+              <div class="card-title">
+                Leave Approvals
+              </div>
+
+            </div>
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+                    <th>Employee</th>
+                    <th>Leave Type</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Days</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+
+                </thead>
+
+                <tbody id="approvalsTable">
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- =================================================
+             EMPLOYEES
+        ================================================== -->
+
+        <div id="page-employees" class="page">
+
+          <div class="card">
+
+            <div class="card-header">
+
+              <div class="card-title">
+                Employees
+              </div>
+
+              <button
+                class="btn btn-primary"
+                onclick="openEmployeeModal()"
+              >
+                + Add Employee
+              </button>
+
+            </div>
+
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Department</th>
+                    <th>Designation</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                  </tr>
+
+                </thead>
+
+                <tbody id="employeesTable">
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- =================================================
+             LEAVE TYPES
+        ================================================== -->
+
+        <div id="page-leaveTypes" class="page">
+
+          <div class="card">
+
+            <div class="card-header">
+
+              <div class="card-title">
+                Leave Types
+              </div>
+
+              <button
+                class="btn btn-primary"
+                onclick="openLeaveTypeModal()"
+              >
+                + Add Leave Type
+              </button>
+
+            </div>
+
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+                    <th>Name</th>
+                    <th>Code</th>
+                    <th>Default Days</th>
+                    <th>Paid</th>
+                    <th>Status</th>
+                  </tr>
+
+                </thead>
+
+                <tbody id="leaveTypesTable">
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- =================================================
+             HOLIDAYS
+        ================================================== -->
+
+        <div id="page-holidays" class="page">
+
+          <div class="card">
+
+            <div class="card-header">
+
+              <div class="card-title">
+                Company Holidays
+              </div>
+
+              <button
+                class="btn btn-primary"
+                onclick="openHolidayModal()"
+              >
+                + Add Holiday
+              </button>
+
+            </div>
+
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+                    <th>Holiday</th>
+                    <th>Date</th>
+                    <th>Description</th>
+                  </tr>
+
+                </thead>
+
+                <tbody id="holidaysTable">
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- =================================================
+             REPORTS
+        ================================================== -->
+
+        <div id="page-reports" class="page">
+
+          <div class="stats-grid">
+
+            <div class="stat-card stat-blue">
+              <div class="stat-label">Total Requests</div>
+              <div id="reportTotal" class="stat-value">0</div>
+            </div>
+
+            <div class="stat-card stat-green">
+              <div class="stat-label">Approved Days</div>
+              <div id="reportApproved" class="stat-value">0</div>
+            </div>
+
+            <div class="stat-card stat-orange">
+              <div class="stat-label">Pending Days</div>
+              <div id="reportPending" class="stat-value">0</div>
+            </div>
+
+            <div class="stat-card stat-red">
+              <div class="stat-label">Rejected Days</div>
+              <div id="reportRejected" class="stat-value">0</div>
+            </div>
+
+          </div>
+
+
+          <div class="card">
+
+            <div class="card-header">
+
+              <div class="card-title">
+                Leave Report
+              </div>
+
+              <button
+                class="btn btn-primary"
+                id="exportReportBtn"
+              >
+                Export CSV
+              </button>
+
+            </div>
+
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Leave Type</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Days</th>
+                    <th>Status</th>
+                  </tr>
+
+                </thead>
+
+                <tbody id="reportsTable">
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- =================================================
+             NOTIFICATIONS
+        ================================================== -->
+
+        <div id="page-notifications" class="page">
+
+          <div class="card">
+
+            <div class="card-header">
+
+              <div class="card-title">
+                Notifications
+              </div>
+
+              <button
+                class="btn btn-secondary btn-sm"
+                id="markAllReadBtn"
+              >
+                Mark All Read
+              </button>
+
+            </div>
+
+            <div id="notificationsContainer">
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- =================================================
+             SETTINGS
+        ================================================== -->
+
+        <div id="page-settings" class="page">
+
+          <div class="card">
+
+            <div class="card-header">
+
+              <div class="card-title">
+                Company Settings
+              </div>
+
+            </div>
+
+
+            <form id="settingsForm">
+
+              <div class="form-grid">
+
+                <div class="form-group">
+
+                  <label>Company Name</label>
+
+                  <input
+                    type="text"
+                    id="companyName"
+                    value="My Company"
+                  >
+
+                </div>
+
+
+                <div class="form-group">
+
+                  <label>Financial Year Start</label>
+
+                  <select id="fyStart">
+
+                    <option value="04">
+                      April
+                    </option>
+
+                    <option value="01">
+                      January
+                    </option>
+
+                  </select>
+
+                </div>
+
+
+                <div class="form-group">
+
+                  <label>Working Days</label>
+
+                  <input
+                    type="text"
+                    id="workingDays"
+                    value="Monday,Tuesday,Wednesday,Thursday,Friday"
+                  >
+
+                </div>
+
+
+                <div class="form-group">
+
+                  <label>Carry Forward Allowed</label>
+
+                  <select id="carryForward">
+
+                    <option value="yes">
+                      Yes
+                    </option>
+
+                    <option value="no">
+                      No
+                    </option>
+
+                  </select>
+
+                </div>
+
+              </div>
+
+
+              <div class="form-actions">
+
+                <button
+                  type="submit"
+                  class="btn btn-primary"
+                >
+                  Save Settings
+                </button>
+
+              </div>
+
+            </form>
+
+          </div>
+
+        </div>
+
+
+      </section>
+
+    </main>
+
+  </div>
+
+
+  <!-- =====================================================
+       EMPLOYEE MODAL
+  ====================================================== -->
+
+  <div id="employeeModal" class="modal-overlay">
+
+    <div class="modal">
+
+      <div class="modal-header">
+
+        <div class="modal-title">
+          Add Employee
+        </div>
+
+        <button
+          class="modal-close"
+          onclick="closeModal('employeeModal')"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <form id="employeeForm">
+
+        <div class="form-grid">
+
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="employeeName" required>
+          </div>
+
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="employeeEmail" required>
+          </div>
+
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="text" id="employeePhone">
+          </div>
+
+          <div class="form-group">
+            <label>Department</label>
+            <input type="text" id="employeeDepartment">
+          </div>
+
+          <div class="form-group">
+            <label>Designation</label>
+            <input type="text" id="employeeDesignation">
+          </div>
+
+          <div class="form-group">
+            <label>Role</label>
+
+            <select id="employeeRole">
+
+              <option value="employee">
+                Employee
+              </option>
+
+              <option value="manager">
+                Manager
+              </option>
+
+              <option value="admin">
+                Administrator
+              </option>
+
+            </select>
+
+          </div>
+
+          <div class="form-group">
+            <label>Joining Date</label>
+            <input type="date" id="employeeJoiningDate">
+          </div>
+
+        </div>
+
+
+        <div class="form-actions">
+
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="closeModal('employeeModal')"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            class="btn btn-primary"
+          >
+            Save Employee
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       LEAVE TYPE MODAL
+  ====================================================== -->
+
+  <div id="leaveTypeModal" class="modal-overlay">
+
+    <div class="modal">
+
+      <div class="modal-header">
+
+        <div class="modal-title">
+          Add Leave Type
+        </div>
+
+        <button
+          class="modal-close"
+          onclick="closeModal('leaveTypeModal')"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <form id="leaveTypeForm">
+
+        <div class="form-grid">
+
+          <div class="form-group">
+            <label>Leave Name</label>
+            <input type="text" id="leaveTypeName" required>
+          </div>
+
+          <div class="form-group">
+            <label>Code</label>
+            <input type="text" id="leaveTypeCode" required>
+          </div>
+
+          <div class="form-group">
+            <label>Default Days</label>
+            <input
+              type="number"
+              id="leaveTypeDays"
+              min="0"
+              step="0.5"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+
+            <label>Paid Leave</label>
+
+            <select id="leaveTypePaid">
+
+              <option value="true">
+                Yes
+              </option>
+
+              <option value="false">
+                No
+              </option>
+
+            </select>
+
+          </div>
+
+          <div class="form-group full-width">
+
+            <label>Description</label>
+
+            <textarea
+              id="leaveTypeDescription"
+              rows="3"
+            ></textarea>
+
+          </div>
+
+        </div>
+
+
+        <div class="form-actions">
+
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="closeModal('leaveTypeModal')"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            class="btn btn-primary"
+          >
+            Save Leave Type
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       HOLIDAY MODAL
+  ====================================================== -->
+
+  <div id="holidayModal" class="modal-overlay">
+
+    <div class="modal">
+
+      <div class="modal-header">
+
+        <div class="modal-title">
+          Add Holiday
+        </div>
+
+        <button
+          class="modal-close"
+          onclick="closeModal('holidayModal')"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <form id="holidayForm">
+
+        <div class="form-group">
+
+          <label>Holiday Name</label>
+
+          <input
+            type="text"
+            id="holidayName"
+            required
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label>Holiday Date</label>
+
+          <input
+            type="date"
+            id="holidayDate"
+            required
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <label>Description</label>
+
+          <textarea
+            id="holidayDescription"
+            rows="3"
+          ></textarea>
+
+        </div>
+
+
+        <div class="form-actions">
+
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="closeModal('holidayModal')"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            class="btn btn-primary"
+          >
+            Save Holiday
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <!-- TOAST -->
+
+  <div id="toast" class="toast"></div>
+
+
+  <!-- =====================================================
+       PART 2 JAVASCRIPT WILL GO HERE
+  ====================================================== -->
+
+  <script>
+
+    /*
+      ======================================================
+      SUPABASE CONFIGURATION
+      ======================================================
+    */
+
+    const SUPABASE_URL =
+      "https://bdctxguwkctnywuyqcwr.supabase.co";
+
+    const SUPABASE_ANON_KEY =
+      "sb_publishable_n_UxO7wNYQZoayp4Uhsmdg_LMMwc2np";
+
+    const supabaseClient =
+      window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY
+      );
+
+
+/* =========================================================
+   LEAVE MANAGEMENT SYSTEM
+   PART 2 - JAVASCRIPT
+========================================================= */
+
+
+/* =========================================================
+   GLOBAL VARIABLES
+========================================================= */
+
+let currentUser = null;
+let currentEmployee = null;
+
+let leaveTypes = [];
+let employees = [];
+let leaves = [];
+let holidays = [];
+let notifications = [];
+let leaveBalances = [];
+
+let currentCalendarDate = new Date();
+
+
+/* =========================================================
+   DEMO USERS
+   These are ONLY for initial testing.
+========================================================= */
+
+const demoUsers = [
+  {
+    email: "admin@company.com",
+    password: "123456",
+    name: "Administrator",
+    role: "admin"
+  },
+  {
+    email: "manager@company.com",
+    password: "123456",
+    name: "Manager",
+    role: "manager"
+  },
+  {
+    email: "employee@company.com",
+    password: "123456",
+    name: "Employee",
+    role: "employee"
+  }
+];
+
+
+/* =========================================================
+   PAGE TITLES
+========================================================= */
+
+const pageTitles = {
+  dashboard: "Dashboard",
+  applyLeave: "Apply Leave",
+  myLeaves: "My Leaves",
+  calendar: "Calendar",
+  approvals: "Approvals",
+  employees: "Employees",
+  leaveTypes: "Leave Types",
+  holidays: "Holidays",
+  reports: "Reports",
+  notifications: "Notifications",
+  settings: "Settings"
+};
+
+
+/* =========================================================
+   INITIALIZATION
+========================================================= */
+
+document.addEventListener("DOMContentLoaded", async function () {
+
+  setupNavigation();
+  setupForms();
+  setupCalendarButtons();
+  setupLogout();
+  setupMobileMenu();
+
+  await checkExistingSession();
+
+});
+
+
+/* =========================================================
+   SUPABASE SESSION CHECK
+========================================================= */
+
+async function checkExistingSession() {
+
+  try {
+
+    const { data, error } =
+      await supabaseClient.auth.getSession();
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    if (data.session) {
+
+      currentUser = data.session.user;
+
+      await loadEmployeeProfile();
+
+      if (currentEmployee) {
+        await startApplication();
+      }
+
+    }
+
+  } catch (error) {
+
+    console.error("Session error:", error);
+
+  }
+
+}
+
+
+/* =========================================================
+   AUTH STATE CHANGE
+========================================================= */
+
+supabaseClient.auth.onAuthStateChange(
+  async function (event, session) {
+
+    if (event === "SIGNED_OUT") {
+
+      currentUser = null;
+      currentEmployee = null;
+
+      showLoginScreen();
+
+    }
+
+  }
+);
+
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
+document.getElementById("loginForm").addEventListener(
+  "submit",
+  async function (event) {
+
+    event.preventDefault();
+
+    const email =
+      document.getElementById("loginEmail").value.trim();
+
+    const password =
+      document.getElementById("loginPassword").value;
+
+    const message =
+      document.getElementById("loginMessage");
+
+    message.textContent = "Logging in...";
+    message.style.color = "#2563eb";
+
+
+    try {
+
+      /*
+        First try REAL SUPABASE LOGIN
+      */
+
+      const { data, error } =
+        await supabaseClient.auth.signInWithPassword({
+          email: email,
+          password: password
+        });
+
+
+      if (!error && data.user) {
+
+        currentUser = data.user;
+
+        await loadEmployeeProfile();
+
+        if (!currentEmployee) {
+
+          message.textContent =
+            "Login successful, but employee profile is not created yet.";
+
+          await supabaseClient.auth.signOut();
+
+          return;
+        }
+
+        message.textContent = "";
+
+        await startApplication();
+
+        return;
+      }
+
+
+      /*
+        Temporary demo login fallback.
+        This allows the UI to remain testable
+        before real users are created.
+      */
+
+      const demoUser =
+        demoUsers.find(function (user) {
+
+          return (
+            user.email.toLowerCase() === email.toLowerCase() &&
+            user.password === password
+          );
+
+        });
+
+
+      if (demoUser) {
+
+        currentUser = {
+          id: "demo-" + demoUser.role,
+          email: demoUser.email,
+          demo: true
+        };
+
+        currentEmployee = {
+          id: "demo-" + demoUser.role,
+          auth_user_id: null,
+          full_name: demoUser.name,
+          email: demoUser.email,
+          department:
+            demoUser.role === "manager"
+              ? "Management"
+              : "General",
+          designation:
+            demoUser.role === "admin"
+              ? "Administrator"
+              : demoUser.role === "manager"
+                ? "Manager"
+                : "Employee",
+          role: demoUser.role,
+          status: "active"
+        };
+
+        message.textContent = "";
+
+        await startApplication();
+
+        return;
+      }
+
+
+      message.textContent =
+        "Invalid email or password.";
+
+      message.style.color = "#dc2626";
+
+    } catch (error) {
+
+      console.error(error);
+
+      message.textContent =
+        "Login failed. Please check Supabase settings.";
+
+      message.style.color = "#dc2626";
+
+    }
+
+  }
+);
+
+
+/* =========================================================
+   LOAD EMPLOYEE PROFILE
+========================================================= */
+
+async function loadEmployeeProfile() {
+
+  if (!currentUser || currentUser.demo) {
+    return;
+  }
+
+
+  const { data, error } =
+    await supabaseClient
+      .from("employees")
+      .select("*")
+      .eq("auth_user_id", currentUser.id)
+      .maybeSingle();
+
+
+  if (error) {
+
+    console.error(
+      "Employee profile error:",
+      error
+    );
+
+    currentEmployee = null;
+
+    return;
+  }
+
+
+  currentEmployee = data;
+}
+
+
+/* =========================================================
+   START APPLICATION
+========================================================= */
+
+async function startApplication() {
+
+  document.getElementById("loginScreen").style.display =
+    "none";
+
+  document.getElementById("app").style.display =
+    "block";
+
+
+  updateUserHeader();
+
+  applyRolePermissions();
+
+  await loadAllData();
+
+  populateLeaveTypeDropdown();
+
+  showPage("dashboard");
+
+}
+
+
+/* =========================================================
+   SHOW LOGIN
+========================================================= */
+
+function showLoginScreen() {
+
+  document.getElementById("loginScreen").style.display =
+    "flex";
+
+  document.getElementById("app").style.display =
+    "none";
+
+}
+
+
+/* =========================================================
+   LOGOUT
+========================================================= */
+
+function setupLogout() {
+
+  document
+    .getElementById("logoutBtn")
+    .addEventListener("click", async function () {
+
+      try {
+
+        if (
+          currentUser &&
+          !currentUser.demo
+        ) {
+
+          await supabaseClient.auth.signOut();
+
+        }
+
+      } catch (error) {
+
+        console.error(error);
+
+      }
+
+
+      currentUser = null;
+      currentEmployee = null;
+
+      showLoginScreen();
+
+      document.getElementById("loginForm").reset();
+
+      showToast("Logged out successfully.");
+
+    });
+
+}
+
+
+/* =========================================================
+   USER HEADER
+========================================================= */
+
+function updateUserHeader() {
+
+  if (!currentEmployee) return;
+
+
+  document.getElementById("topUserName").textContent =
+    currentEmployee.full_name || "User";
+
+
+  document.getElementById("topUserRole").textContent =
+    currentEmployee.role || "Employee";
+
+
+  const name =
+    currentEmployee.full_name || "User";
+
+
+  document.getElementById("topAvatar").textContent =
+    name.charAt(0).toUpperCase();
+
+}
+
+
+/* =========================================================
+   ROLE PERMISSIONS
+========================================================= */
+
+function applyRolePermissions() {
+
+  const role =
+    currentEmployee?.role || "employee";
+
+
+  document
+    .querySelectorAll(".manager-admin-only")
+    .forEach(function (element) {
+
+      if (
+        role === "manager" ||
+        role === "admin"
+      ) {
+
+        element.style.display = "flex";
+
+      } else {
+
+        element.style.display = "none";
+
+      }
+
+    });
+
+
+  document
+    .querySelectorAll(".admin-only")
+    .forEach(function (element) {
+
+      if (role === "admin") {
+
+        element.style.display = "flex";
+
+      } else {
+
+        element.style.display = "none";
+
+      }
+
+    });
+
+}
+
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+
+function setupNavigation() {
+
+  document
+    .querySelectorAll(".nav-item[data-page]")
+    .forEach(function (item) {
+
+      item.addEventListener("click", function () {
+
+        const page =
+          item.getAttribute("data-page");
+
+        showPage(page);
+
+        document
+          .getElementById("sidebar")
+          .classList.remove("open");
+
+      });
+
+    });
+
+}
+
+
+function showPage(pageName) {
+
+  const page =
+    document.getElementById(
+      "page-" + pageName
+    );
+
+
+  if (!page) return;
+
+
+  /*
+    Security check
+  */
+
+  const role =
+    currentEmployee?.role || "employee";
+
+
+  if (
+    (
+      pageName === "approvals" ||
+      pageName === "employees" ||
+      pageName === "reports"
+    ) &&
+    role !== "manager" &&
+    role !== "admin"
+  ) {
+
+    showToast("You do not have permission to access this page.");
+
+    return;
+
+  }
+
+
+  if (
+    (
+      pageName === "leaveTypes" ||
+      pageName === "holidays" ||
+      pageName === "settings"
+    ) &&
+    role !== "admin"
+  ) {
+
+    showToast("Administrator access required.");
+
+    return;
+
+  }
+
+
+  document
+    .querySelectorAll(".page")
+    .forEach(function (p) {
+
+      p.classList.remove("active");
+
+    });
+
+
+  document
+    .querySelectorAll(".nav-item[data-page]")
+    .forEach(function (item) {
+
+      item.classList.remove("active");
+
+    });
+
+
+  page.classList.add("active");
+
+
+  const nav =
+    document.querySelector(
+      '.nav-item[data-page="' +
+      pageName +
+      '"]'
+    );
+
+
+  if (nav) {
+    nav.classList.add("active");
+  }
+
+
+  document.getElementById("pageTitle").textContent =
+    pageTitles[pageName] || "Dashboard";
+
+
+  /*
+    Refresh page data
+  */
+
+  if (pageName === "dashboard") {
+    renderDashboard();
+  }
+
+  if (pageName === "myLeaves") {
+    renderMyLeaves();
+  }
+
+  if (pageName === "calendar") {
+    renderCalendar();
+  }
+
+  if (pageName === "approvals") {
+    renderApprovals();
+  }
+
+  if (pageName === "employees") {
+    renderEmployees();
+  }
+
+  if (pageName === "leaveTypes") {
+    renderLeaveTypes();
+  }
+
+  if (pageName === "holidays") {
+    renderHolidays();
+  }
+
+  if (pageName === "reports") {
+    renderReports();
+  }
+
+  if (pageName === "notifications") {
+    renderNotifications();
+  }
+
+  if (pageName === "settings") {
+    loadSettings();
+  }
+
+}
+
+
+/* =========================================================
+   LOAD ALL DATA
+========================================================= */
+
+async function loadAllData() {
+
+  await loadEmployees();
+  await loadLeaveTypes();
+  await loadLeaves();
+  await loadHolidays();
+  await loadNotifications();
+  await loadLeaveBalances();
+
+}
+
+
+/* =========================================================
+   LOAD EMPLOYEES
+========================================================= */
+
+async function loadEmployees() {
+
+  if (currentUser?.demo) {
+
+    employees = [
+      {
+        id: "demo-admin",
+        full_name: "Administrator",
+        email: "admin@company.com",
+        department: "Management",
+        designation: "Administrator",
+        role: "admin",
+        status: "active"
+      },
+      {
+        id: "demo-manager",
+        full_name: "Manager",
+        email: "manager@company.com",
+        department: "Management",
+        designation: "Manager",
+        role: "manager",
+        status: "active"
+      },
+      {
+        id: "demo-employee",
+        full_name: "Employee",
+        email: "employee@company.com",
+        department: "General",
+        designation: "Employee",
+        role: "employee",
+        status: "active"
+      }
+    ];
+
+    return;
+  }
+
+
+  const { data, error } =
+    await supabaseClient
+      .from("employees")
+      .select("*")
+      .order("full_name");
+
+
+  if (error) {
+
+    console.error(error);
+
+    employees = [];
+
+    return;
+  }
+
+
+  employees = data || [];
+
+}
+
+
+/* =========================================================
+   LOAD LEAVE TYPES
+========================================================= */
+
+async function loadLeaveTypes() {
+
+  const { data, error } =
+    await supabaseClient
+      .from("leave_types")
+      .select("*")
+      .eq("status", "active")
+      .order("name");
+
+
+  if (error) {
+
+    console.error(error);
+
+    leaveTypes = [];
+
+    return;
+  }
+
+
+  leaveTypes = data || [];
+
+
+  /*
+    If database is empty, create basic leave types
+    only for administrator/demo testing.
+  */
+
+  if (
+    leaveTypes.length === 0 &&
+    (
+      currentEmployee?.role === "admin" ||
+      currentUser?.demo
+    )
+  ) {
+
+    const defaultTypes = [
+      {
+        name: "Casual Leave",
+        code: "CL",
+        description: "Casual Leave",
+        default_days: 12,
+        is_paid: true,
+        status: "active"
+      },
+      {
+        name: "Sick Leave",
+        code: "SL",
+        description: "Sick Leave",
+        default_days: 12,
+        is_paid: true,
+        status: "active"
+      },
+      {
+        name: "Privilege Leave",
+        code: "PL",
+        description: "Privilege / Earned Leave",
+        default_days: 15,
+        is_paid: true,
+        status: "active"
+      }
+    ];
+
+
+    if (!currentUser?.demo) {
+
+      const { data } =
+        await supabaseClient
+          .from("leave_types")
+          .insert(defaultTypes)
+          .select("*");
+
+
+      if (data) {
+        leaveTypes = data;
+      }
+
+    } else {
+
+      leaveTypes = defaultTypes.map(function (item, index) {
+
+        return {
+          ...item,
+          id: "demo-leave-type-" + index
+        };
+
+      });
+
+    }
+
+  }
+
+}
+
+/* =========================================================
+   LOAD LEAVES
+========================================================= */
+
+async function loadLeaves() {
+
+  if (currentUser?.demo) {
+
+    leaves = [];
+
+    return;
+
+  }
+
+  const { data, error } = await supabaseClient
+    .from("leave_requests")
+    .select(`
+      *,
+      employees:employee_id(
+        id,
+        full_name,
+        email,
+        department,
+        designation,
+        role
+      ),
+      leave_types:leave_type_id(
+        id,
+        name,
+        code
+      )
+    `);
+
+  if (error) {
+    console.error("Load leaves error:", error);
+    leaves = [];
+    return;
+  }
+
+  leaves = data || [];
+
+}
+/* =========================================================
+   LOAD HOLIDAYS
+========================================================= */
+
+async function loadHolidays() {
+
+  const { data, error } =
+    await supabaseClient
+      .from("holidays")
+      .select("*")
+      .order("holiday_date");
+
+
+  if (error) {
+
+    console.error(error);
+
+    holidays = [];
+
+    return;
+
+  }
+
+
+  holidays = data || [];
+
+}
+
+
+/* =========================================================
+   LOAD NOTIFICATIONS
+========================================================= */
+
+async function loadNotifications() {
+
+  if (currentUser?.demo) {
+
+    notifications = [];
+
+    return;
+
+  }
+
+
+  const { data, error } =
+    await supabaseClient
+      .from("notifications")
+      .select("*")
+      .eq("employee_id", currentEmployee.id)
+      .order("created_at", {
+        ascending: false
+      });
+
+
+  if (error) {
+
+    console.error(error);
+
+    notifications = [];
+
+    return;
+
+  }
+
+
+  notifications = data || [];
+
+}
+
+
+/* =========================================================
+   LOAD BALANCES
+========================================================= */
+
+async function loadLeaveBalances() {
+
+  if (currentUser?.demo) {
+
+    leaveBalances = [];
+
+    return;
+
+  }
+
+
+  const fy =
+    getFinancialYear();
+
+
+  const { data, error } =
+    await supabaseClient
+      .from("leave_balances")
+      .select(`
+        *,
+        leave_types:leave_type_id(
+          id,
+          name,
+          code
+        )
+      `)
+      .eq("employee_id", currentEmployee.id)
+      .eq("financial_year", fy);
+
+
+  if (error) {
+
+    console.error(error);
+
+    leaveBalances = [];
+
+    return;
+
+  }
+
+
+  leaveBalances = data || [];
+
+}
+
+
+/* =========================================================
+   LEAVE FORM
+========================================================= */
+
+function setupForms() {
+
+  document
+    .getElementById("leaveForm")
+    .addEventListener("submit", submitLeave);
+
+
+  document
+    .getElementById("employeeForm")
+    .addEventListener("submit", submitEmployee);
+
+
+  document
+    .getElementById("leaveTypeForm")
+    .addEventListener("submit", submitLeaveType);
+
+
+  document
+    .getElementById("holidayForm")
+    .addEventListener("submit", submitHoliday);
+
+
+  document
+    .getElementById("settingsForm")
+    .addEventListener("submit", saveSettings);
+
+
+  document
+    .getElementById("durationType")
+    .addEventListener("change", updateDateRules);
+
+
+  document
+    .getElementById("fromDate")
+    .addEventListener("change", updateDateRules);
+
+}
+
+
+/* =========================================================
+   DATE RULES
+========================================================= */
+
+function updateDateRules() {
+
+  const duration =
+    document.getElementById("durationType").value;
+
+  const toDate =
+    document.getElementById("toDate");
+
+
+  if (
+    duration === "first_half" ||
+    duration === "second_half"
+  ) {
+
+    toDate.value =
+      document.getElementById("fromDate").value;
+
+    toDate.disabled = true;
+
+  } else {
+
+    toDate.disabled = false;
+
+  }
+
+}
+
+
+/* =========================================================
+   CALCULATE DAYS
+========================================================= */
+
+function calculateLeaveDays(
+  fromDate,
+  toDate,
+  durationType
+) {
+
+  if (
+    !fromDate ||
+    !toDate
+  ) {
+
+    return 0;
+
+  }
+
+
+  if (
+    durationType === "first_half" ||
+    durationType === "second_half"
+  ) {
+
+    return 0.5;
+
+  }
+
+
+  const start =
+    new Date(fromDate + "T00:00:00");
+
+  const end =
+    new Date(toDate + "T00:00:00");
+
+
+  if (end < start) {
+    return 0;
+  }
+
+
+  let count = 0;
+
+  const current =
+    new Date(start);
+
+
+  while (current <= end) {
+
+    const day =
+      current.getDay();
+
+    /*
+      Sunday excluded.
+      Saturday is currently counted as working day.
+    */
+
+    if (day !== 0) {
+      count++;
+    }
+
+    current.setDate(
+      current.getDate() + 1
+    );
+
+  }
+
+
+  return count;
+
+}
+
+
+/* =========================================================
+   SUBMIT LEAVE
+========================================================= */
+
+async function submitLeave(event) {
+
+  event.preventDefault();
+
+
+  if (!currentEmployee) {
+
+    showToast("Please login first.");
+
+    return;
+
+  }
+
+
+  const leaveTypeId =
+    document.getElementById("leaveType").value;
+
+  const durationType =
+    document.getElementById("durationType").value;
+
+  const fromDate =
+    document.getElementById("fromDate").value;
+
+  const toDate =
+    document.getElementById("toDate").value;
+
+  const reason =
+    document.getElementById("leaveReason").value.trim();
+
+  const file =
+    document.getElementById("leaveAttachment").files[0];
+
+
+  if (!leaveTypeId) {
+
+    showToast("Please select leave type.");
+
+    return;
+
+  }
+
+
+  const totalDays =
+    calculateLeaveDays(
+      fromDate,
+      toDate,
+      durationType
+    );
+
+
+  if (totalDays <= 0) {
+
+    showToast("Please select valid dates.");
+
+    return;
+
+  }
+
+
+  /*
+    Demo mode
+  */
+
+  if (currentUser?.demo) {
+
+    leaves.unshift({
+
+      id: "demo-leave-" + Date.now(),
+
+      employee_id: currentEmployee.id,
+
+      employee: currentEmployee,
+
+      leave_type_id: leaveTypeId,
+
+      leave_types: leaveTypes.find(
+        x => x.id === leaveTypeId
+      ),
+
+      from_date: fromDate,
+
+      to_date: toDate,
+
+      duration_type: durationType,
+
+      total_days: totalDays,
+
+      reason: reason,
+
+      attachment_name:
+        file ? file.name : null,
+
+      status: "pending",
+
+      created_at:
+        new Date().toISOString()
+
+    });
+
+
+    document.getElementById("leaveForm").reset();
+
+    updateDateRules();
+
+    showToast("Leave request submitted.");
+
+    await loadAllData();
+
+    showPage("myLeaves");
+
+    return;
+
+  }
+
+
+  /*
+    Real Supabase
+  */
+
+  const { data, error } =
+    await supabaseClient
+      .from("leave_requests")
+      .insert({
+
+        employee_id: currentEmployee.id,
+
+        leave_type_id: leaveTypeId,
+
+        from_date: fromDate,
+
+        to_date: toDate,
+
+        duration_type: durationType,
+
+        total_days: totalDays,
+
+        reason: reason,
+
+        attachment_name:
+          file ? file.name : null,
+
+        status: "pending"
+
+      })
+      .select()
+      .single();
+
+
+  if (error) {
+
+    console.error(error);
+
+    showToast(
+      "Leave submit failed: " +
+      error.message
+    );
+
+    return;
+
+  }
+
+
+  /*
+    Notification
+  */
+
+  await createNotification(
+    currentEmployee.id,
+    "Leave Applied",
+    "Your leave request has been submitted.",
+    "leave_applied"
+  );
+
+
+  /*
+    Audit
+  */
+
+  await createAuditLog(
+    currentEmployee.id,
+    "CREATE",
+    "Leave",
+    "Employee applied for leave."
+  );
+
+
+  document
+    .getElementById("leaveForm")
+    .reset();
+
+
+  updateDateRules();
+
+  showToast("Leave request submitted successfully.");
+
+  await loadAllData();
+
+  showPage("myLeaves");
+
+}
+
+
+/* =========================================================
+   POPULATE LEAVE TYPE DROPDOWN
+========================================================= */
+
+function populateLeaveTypeDropdown() {
+
+  const select =
+    document.getElementById("leaveType");
+
+
+  select.innerHTML =
+    '<option value="">Select Leave Type</option>';
+
+
+  leaveTypes
+    .filter(function (type) {
+
+      return type.status !== "inactive";
+
+    })
+    .forEach(function (type) {
+
+      const option =
+        document.createElement("option");
+
+      option.value = type.id;
+
+      option.textContent =
+        type.name +
+        " (" +
+        type.code +
+        ")";
+
+      select.appendChild(option);
+
+    });
+
+}
+
+
+/* =========================================================
+   MY LEAVES
+========================================================= */
+
+function renderMyLeaves() {
+
+  const table =
+    document.getElementById("myLeavesTable");
+
+
+  let data =
+    leaves.filter(function (leave) {
+
+      return (
+        leave.employee_id ===
+        currentEmployee.id
+      );
+
+    });
+
+
+  if (data.length === 0) {
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="7">
+          <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            No leave requests found.
+          </div>
+        </td>
+      </tr>
+    `;
+
+    return;
+
+  }
+
+
+  table.innerHTML =
+    data.map(function (leave) {
+
+      const typeName =
+        leave.leave_types?.name ||
+        getLeaveTypeName(leave.leave_type_id);
+
+
+      return `
+        <tr>
+
+          <td>${escapeHtml(typeName)}</td>
+
+          <td>${formatDate(leave.from_date)}</td>
+
+          <td>${formatDate(leave.to_date)}</td>
+
+          <td>${leave.total_days}</td>
+
+          <td>${escapeHtml(leave.reason || "-")}</td>
+
+          <td>
+            ${statusBadge(leave.status)}
+          </td>
+
+          <td>
+
+            ${
+              leave.status === "pending"
+                ? `
+                  <button
+                    class="btn btn-danger btn-sm"
+                    onclick="cancelLeave('${leave.id}')"
+                  >
+                    Cancel
+                  </button>
+                `
+                : "-"
+            }
+
+          </td>
+
+        </tr>
+      `;
+
+    }).join("");
+
+}
+
+
+/* =========================================================
+   CANCEL LEAVE
+========================================================= */
+
+async function cancelLeave(id) {
+
+  if (
+    !confirm(
+      "Are you sure you want to cancel this leave?"
+    )
+  ) {
+
+    return;
+
+  }
+
+
+  if (currentUser?.demo) {
+
+    const leave =
+      leaves.find(
+        x => x.id === id
+      );
+
+    if (leave) {
+      leave.status = "cancelled";
+    }
+
+    showToast("Leave cancelled.");
+
+    renderMyLeaves();
+
+    return;
+
+  }
+
+
+  const { error } =
+    await supabaseClient
+      .from("leave_requests")
+      .update({
+        status: "cancelled"
+      })
+      .eq("id", id)
+      .eq("employee_id", currentEmployee.id)
+      .eq("status", "pending");
+
+
+  if (error) {
+
+    showToast(
+      "Unable to cancel leave."
+    );
+
+    console.error(error);
+
+    return;
+
+  }
+
+
+  await createNotification(
+    currentEmployee.id,
+    "Leave Cancelled",
+    "Your leave request has been cancelled.",
+    "leave_cancelled"
+  );
+
+
+  await loadAllData();
+
+  renderMyLeaves();
+
+  showToast("Leave cancelled successfully.");
+
+}
+
+
+/* =========================================================
+   APPROVALS
+========================================================= */
+
+function renderApprovals() {
+
+  const table =
+    document.getElementById("approvalsTable");
+
+
+  const role =
+    currentEmployee?.role;
+
+
+  let data =
+    leaves.filter(function (leave) {
+
+      if (role === "admin") {
+
+        return leave.status === "pending";
+
+      }
+
+
+      if (role === "manager") {
+
+        const employee =
+          leave.employees ||
+          employees.find(
+            x => x.id === leave.employee_id
+          );
+
+
+        return (
+          leave.status === "pending" &&
+          employee?.department ===
+          currentEmployee.department
+        );
+
+      }
+
+
+      return false;
+
+    });
+
+
+  if (data.length === 0) {
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="8">
+          <div class="empty-state">
+            <div class="empty-icon">✅</div>
+            No pending approvals.
+          </div>
+        </td>
+      </tr>
+    `;
+
+    return;
+
+  }
+
+
+  table.innerHTML =
+    data.map(function (leave) {
+
+      const employee =
+        leave.employees ||
+        employees.find(
+          x => x.id === leave.employee_id
+        );
+
+
+      const typeName =
+        leave.leave_types?.name ||
+        getLeaveTypeName(leave.leave_type_id);
+
+
+      return `
+        <tr>
+
+          <td>
+            ${escapeHtml(
+              employee?.full_name || "-"
+            )}
+          </td>
+
+          <td>${escapeHtml(typeName)}</td>
+
+          <td>${formatDate(leave.from_date)}</td>
+
+          <td>${formatDate(leave.to_date)}</td>
+
+          <td>${leave.total_days}</td>
+
+          <td>${escapeHtml(leave.reason || "-")}</td>
+
+          <td>${statusBadge(leave.status)}</td>
+
+          <td>
+
+            <button
+              class="btn btn-success btn-sm"
+              onclick="approveLeave('${leave.id}')"
+            >
+              Approve
+            </button>
+
+            <button
+              class="btn btn-danger btn-sm"
+              onclick="rejectLeave('${leave.id}')"
+            >
+              Reject
+            </button>
+
+          </td>
+
+        </tr>
+      `;
+
+    }).join("");
+
+}
+
+
+/* =========================================================
+   APPROVE LEAVE
+========================================================= */
+
+async function approveLeave(id) {
+
+  const leave =
+    leaves.find(
+      x => x.id === id
+    );
+
+
+  if (!leave) return;
+
+
+  if (
+    currentEmployee.role !== "admin" &&
+    currentEmployee.role !== "manager"
+  ) {
+
+    showToast("Permission denied.");
+
+    return;
+
+  }
+
+
+  if (currentUser?.demo) {
+
+    leave.status = "approved";
+
+    leave.approved_by =
+      currentEmployee.id;
+
+    leave.approved_at =
+      new Date().toISOString();
+
+    showToast("Leave approved.");
+
+    renderApprovals();
+
+    return;
+
+  }
+
+
+  const { error } =
+    await supabaseClient
+      .from("leave_requests")
+      .update({
+
+        status: "approved",
+
+        approved_by:
+          currentEmployee.id,
+
+        approved_at:
+          new Date().toISOString()
+
+      })
+      .eq("id", id)
+      .eq("status", "pending");
+
+
+  if (error) {
+
+    console.error(error);
+
+    showToast(
+      "Unable to approve leave."
+    );
+
+    return;
+
+  }
+
+
+  await createNotification(
+    leave.employee_id,
+    "Leave Approved",
+    "Your leave request has been approved.",
+    "leave_approved"
+  );
+
+
+  await createAuditLog(
+    currentEmployee.id,
+    "APPROVE",
+    "Leave",
+    "Leave request approved."
+  );
+
+
+  await loadAllData();
+
+  renderApprovals();
+
+  showToast("Leave approved successfully.");
+
+}
+
+
+/* =========================================================
+   REJECT LEAVE
+========================================================= */
+
+async function rejectLeave(id) {
+
+  const reason =
+    prompt(
+      "Enter rejection reason:"
+    );
+
+
+  if (reason === null) {
+    return;
+  }
+
+
+  const leave =
+    leaves.find(
+      x => x.id === id
+    );
+
+
+  if (!leave) return;
+
+
+  if (currentUser?.demo) {
+
+    leave.status = "rejected";
+
+    leave.rejection_reason =
+      reason;
+
+    showToast("Leave rejected.");
+
+    renderApprovals();
+
+    return;
+
+  }
+
+
+  const { error } =
+    await supabaseClient
+      .from("leave_requests")
+      .update({
+
+        status: "rejected",
+
+        rejection_reason:
+          reason
+
+      })
+      .eq("id", id)
+      .eq("status", "pending");
+
+
+  if (error) {
+
+    console.error(error);
+
+    showToast(
+      "Unable to reject leave."
+    );
+
+    return;
+
+  }
+
+
+  await createNotification(
+    leave.employee_id,
+    "Leave Rejected",
+    "Your leave request has been rejected.",
+    "leave_rejected"
+  );
+
+
+  await createAuditLog(
+    currentEmployee.id,
+    "REJECT",
+    "Leave",
+    "Leave request rejected."
+  );
+
+
+  await loadAllData();
+
+  renderApprovals();
+
+  showToast("Leave rejected successfully.");
+
+}
+
+
+/* =========================================================
+   EMPLOYEES
+========================================================= */
+
+function renderEmployees() {
+
+  const table =
+    document.getElementById("employeesTable");
+
+
+  if (employees.length === 0) {
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="6">
+          <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            No employees found.
+          </div>
+        </td>
+      </tr>
+    `;
+
+    return;
+
+  }
+
+
+  table.innerHTML =
+    employees.map(function (employee) {
+
+      return `
+        <tr>
+
+          <td>
+            ${escapeHtml(
+              employee.full_name || "-"
+            )}
+          </td>
+
+          <td>
+            ${escapeHtml(
+              employee.email || "-"
+            )}
+          </td>
+
+          <td>
+            ${escapeHtml(
+              employee.department || "-"
+            )}
+          </td>
+
+          <td>
+            ${escapeHtml(
+              employee.designation || "-"
+            )}
+          </td>
+
+          <td>
+            ${escapeHtml(
+              employee.role || "-"
+            )}
+          </td>
+
+          <td>
+            ${statusBadge(
+              employee.status || "active"
+            )}
+          </td>
+
+        </tr>
+      `;
+
+    }).join("");
+
+}
+
+
+/* =========================================================
+   EMPLOYEE MODAL
+========================================================= */
+
+function openEmployeeModal() {
+
+  document
+    .getElementById("employeeForm")
+    .reset();
+
+  openModal("employeeModal");
+
+}
+
+
+async function submitEmployee(event) {
+
+  event.preventDefault();
+
+
+  if (
+    currentEmployee?.role !== "admin"
+  ) {
+
+    showToast(
+      "Administrator access required."
+    );
+
+    return;
+
+  }
+
+
+  const employeeData = {
+
+    full_name:
+      document.getElementById("employeeName").value.trim(),
+
+    email:
+      document.getElementById("employeeEmail").value.trim(),
+
+    phone:
+      document.getElementById("employeePhone").value.trim(),
+
+    department:
+      document.getElementById("employeeDepartment").value.trim(),
+
+    designation:
+      document.getElementById("employeeDesignation").value.trim(),
+
+    role:
+      document.getElementById("employeeRole").value,
+
+    joining_date:
+      document.getElementById("employeeJoiningDate").value || null,
+
+    status: "active"
+
+  };
+
+
+  if (currentUser?.demo) {
+
+    employees.push({
+      ...employeeData,
+      id: "demo-employee-" + Date.now()
+    });
+
+    closeModal("employeeModal");
+
+    renderEmployees();
+
+    showToast("Employee added in demo mode.");
+
+    return;
+
+  }
+
+
+  const { error } =
+    await supabaseClient
+      .from("employees")
+      .insert(employeeData);
+
+
+  if (error) {
+
+    console.error(error);
+
+    showToast(
+      "Unable to add employee: " +
+      error.message
+    );
+
+    return;
+
+  }
+
+
+  closeModal("employeeModal");
+
+  await loadEmployees();
+
+  renderEmployees();
+
+  showToast("Employee added successfully.");
+
+}
+
+
+/* =========================================================
+   LEAVE TYPES
+========================================================= */
+
+function renderLeaveTypes() {
+
+  const table =
+    document.getElementById("leaveTypesTable");
+
+
+  if (leaveTypes.length === 0) {
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="5">
+          <div class="empty-state">
+            <div class="empty-icon">🏷️</div>
+            No leave types found.
+          </div>
+        </td>
+      </tr>
+    `;
+
+    return;
+
+  }
+
+
+  table.innerHTML =
+    leaveTypes.map(function (type) {
+
+      return `
+        <tr>
+
+          <td>
+            ${escapeHtml(type.name)}
+          </td>
+
+          <td>
+            ${escapeHtml(type.code)}
+          </td>
+
+          <td>
+            ${type.default_days}
+          </td>
+
+          <td>
+            ${type.is_paid ? "Yes" : "No"}
+          </td>
+
+          <td>
+            ${statusBadge(
+              type.status || "active"
+            )}
+          </td>
+
+        </tr>
+      `;
+
+    }).join("");
+
+}
+
+
+/* =========================================================
+   LEAVE TYPE MODAL
+========================================================= */
+
+function openLeaveTypeModal() {
+
+  document
+    .getElementById("leaveTypeForm")
+    .reset();
+
+  openModal("leaveTypeModal");
+
+}
+
+
+async function submitLeaveType(event) {
+
+  event.preventDefault();
+
+
+  if (
+    currentEmployee?.role !== "admin"
+  ) {
+
+    showToast(
+      "Administrator access required."
+    );
+
+    return;
+
+  }
+
+
+  const data = {
+
+    name:
+      document.getElementById("leaveTypeName").value.trim(),
+
+    code:
+      document
+        .getElementById("leaveTypeCode")
+        .value
+        .trim()
+        .toUpperCase(),
+
+    default_days:
+      Number(
+        document.getElementById("leaveTypeDays").value
+      ),
+
+    is_paid:
+      document.getElementById("leaveTypePaid").value === "true",
+
+    description:
+      document
+        .getElementById("leaveTypeDescription")
+        .value
+        .trim(),
+
+    status: "active"
+
+  };
+
+
+  if (currentUser?.demo) {
+
+    leaveTypes.push({
+      ...data,
+      id: "demo-type-" + Date.now()
+    });
+
+    closeModal("leaveTypeModal");
+
+    populateLeaveTypeDropdown();
+
+    renderLeaveTypes();
+
+    showToast("Leave type added in demo mode.");
+
+    return;
+
+  }
+
+
+  const { error } =
+    await supabaseClient
+      .from("leave_types")
+      .insert(data);
+
+
+  if (error) {
+
+    console.error(error);
+
+    showToast(
+      "Unable to add leave type: " +
+      error.message
+    );
+
+    return;
+
+  }
+
+
+  closeModal("leaveTypeModal");
+
+  await loadLeaveTypes();
+
+  populateLeaveTypeDropdown();
+
+  renderLeaveTypes();
+
+  showToast("Leave type added successfully.");
+
+}
+
+
+/* =========================================================
+   HOLIDAYS
+========================================================= */
+
+function renderHolidays() {
+
+  const table =
+    document.getElementById("holidaysTable");
+
+
+  if (holidays.length === 0) {
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="3">
+          <div class="empty-state">
+            <div class="empty-icon">🎉</div>
+            No holidays added.
+          </div>
+        </td>
+      </tr>
+    `;
+
+    return;
+
+  }
+
+
+  table.innerHTML =
+    holidays.map(function (holiday) {
+
+      return `
+        <tr>
+
+          <td>
+            ${escapeHtml(
+              holiday.holiday_name
+            )}
+          </td>
+
+          <td>
+            ${formatDate(
+              holiday.holiday_date
+            )}
+          </td>
+
+          <td>
+            ${escapeHtml(
+              holiday.description || "-"
+            )}
+          </td>
+
+        </tr>
+      `;
+
+    }).join("");
+
+}
+
+
+/* =========================================================
+   HOLIDAY MODAL
+========================================================= */
+
+function openHolidayModal() {
+
+  document
+    .getElementById("holidayForm")
+    .reset();
+
+  openModal("holidayModal");
+
+}
+
+
+async function submitHoliday(event) {
+
+  event.preventDefault();
+
+
+  if (
+    currentEmployee?.role !== "admin"
+  ) {
+
+    showToast(
+      "Administrator access required."
+    );
+
+    return;
+
+  }
+
+
+  const data = {
+
+    holiday_name:
+      document.getElementById("holidayName").value.trim(),
+
+    holiday_date:
+      document.getElementById("holidayDate").value,
+
+    description:
+      document
+        .getElementById("holidayDescription")
+        .value
+        .trim()
+
+  };
+
+
+  if (currentUser?.demo) {
+
+    holidays.push({
+      ...data,
+      id: "demo-holiday-" + Date.now()
+    });
+
+    closeModal("holidayModal");
+
+    renderHolidays();
+
+    showToast("Holiday added in demo mode.");
+
+    return;
+
+  }
+
+
+  const { error } =
+    await supabaseClient
+      .from("holidays")
+      .insert(data);
+
+
+  if (error) {
+
+    console.error(error);
+
+    showToast(
+      "Unable to add holiday: " +
+      error.message
+    );
+
+    return;
+
+  }
+
+
+  closeModal("holidayModal");
+
+  await loadHolidays();
+
+  renderHolidays();
+
+  showToast("Holiday added successfully.");
+
+}
+
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
+
+function renderDashboard() {
+
+  if (!currentEmployee) return;
+
+
+  const myLeaves =
+    leaves.filter(function (leave) {
+
+      return (
+        leave.employee_id ===
+        currentEmployee.id
+      );
+
+    });
+
+
+  const total =
+    myLeaves.reduce(
+      (sum, leave) =>
+        sum + Number(leave.total_days || 0),
+      0
+    );
+
+
+  const approved =
+    myLeaves
+      .filter(x => x.status === "approved")
+      .reduce(
+        (sum, leave) =>
+          sum + Number(leave.total_days || 0),
+        0
+      );
+
+
+  const pending =
+    myLeaves
+      .filter(x => x.status === "pending")
+      .reduce(
+        (sum, leave) =>
+          sum + Number(leave.total_days || 0),
+        0
+      );
+
+
+  const rejected =
+    myLeaves
+      .filter(x => x.status === "rejected")
+      .reduce(
+        (sum, leave) =>
+          sum + Number(leave.total_days || 0),
+        0
+      );
+
+
+  document.getElementById("statTotal").textContent =
+    total;
+
+  document.getElementById("statApproved").textContent =
+    approved;
+
+  document.getElementById("statPending").textContent =
+    pending;
+
+  document.getElementById("statRejected").textContent =
+    rejected;
+
+
+  renderDashboardLeaves(myLeaves);
+
+  renderDashboardBalances();
+
+}
+
+
+/* =========================================================
+   DASHBOARD RECENT LEAVES
+========================================================= */
+
+function renderDashboardLeaves(data) {
+
+  const table =
+    document.getElementById(
+      "dashboardLeavesTable"
+    );
+
+
+  const recent =
+    data.slice(0, 5);
+
+
+  if (recent.length === 0) {
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="5">
+          <div class="empty-state">
+            No leave requests yet.
+          </div>
+        </td>
+      </tr>
+    `;
+
+    return;
+
+  }
+
+
+  table.innerHTML =
+    recent.map(function (leave) {
+
+      return `
+        <tr>
+
+          <td>
+            ${escapeHtml(
+              leave.leave_types?.name ||
+              getLeaveTypeName(
+                leave.leave_type_id
+              )
+            )}
+          </td>
+
+          <td>
+            ${formatDate(
+              leave.from_date
+            )}
+          </td>
+
+          <td>
+            ${formatDate(
+              leave.to_date
+            )}
+          </td>
+
+          <td>
+            ${leave.total_days}
+          </td>
+
+          <td>
+            ${statusBadge(
+              leave.status
+            )}
+          </td>
+
+        </tr>
+      `;
+
+    }).join("");
+
+}
+
+
+/* =========================================================
+   DASHBOARD BALANCES
+========================================================= */
+
+function renderDashboardBalances() {
+
+  const container =
+    document.getElementById(
+      "dashboardBalances"
+    );
+
+
+  if (
+    currentUser?.demo ||
+    leaveBalances.length === 0
+  ) {
+
+    container.innerHTML =
+      leaveTypes.map(function (type) {
+
+        return `
+          <div
+            style="
+              display:flex;
+              justify-content:space-between;
+              padding:12px 0;
+              border-bottom:1px solid #eee;
+            "
+          >
+
+            <span>
+              ${escapeHtml(type.name)}
+            </span>
+
+            <strong>
+              ${type.default_days} days
+            </strong>
+
+          </div>
+        `;
+
+      }).join("");
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    leaveBalances.map(function (balance) {
+
+      const remaining =
+        Number(balance.allocated_days || 0) -
+        Number(balance.used_days || 0);
+
+
+      return `
+        <div
+          style="
+            display:flex;
+            justify-content:space-between;
+            padding:12px 0;
+            border-bottom:1px solid #eee;
+          "
+        >
+
+          <span>
+            ${escapeHtml(
+              balance.leave_types?.name ||
+              "-"
+            )}
+          </span>
+
+          <strong>
+            ${remaining} days
+          </strong>
+
+        </div>
+      `;
+
+    }).join("");
+
+}
+
+
+/* =========================================================
+   CALENDAR
+========================================================= */
+
+function setupCalendarButtons() {
+
+  document
+    .getElementById("prevMonthBtn")
+    .addEventListener("click", function () {
+
+      currentCalendarDate.setMonth(
+        currentCalendarDate.getMonth() - 1
+      );
+
+      renderCalendar();
+
+    });
+
+
+  document
+    .getElementById("nextMonthBtn")
+    .addEventListener("click", function () {
+
+      currentCalendarDate.setMonth(
+        currentCalendarDate.getMonth() + 1
+      );
+
+      renderCalendar();
+
+    });
+
+}
+
+
+function renderCalendar() {
+
+  const container =
+    document.getElementById(
+      "calendarContainer"
+    );
+
+
+  const year =
+    currentCalendarDate.getFullYear();
+
+  const month =
+    currentCalendarDate.getMonth();
+
+
+  document.getElementById(
+    "calendarMonth"
+  ).textContent =
+    new Date(
+      year,
+      month,
+      1
+    ).toLocaleDateString(
+      "en-IN",
+      {
+        month: "long",
+        year: "numeric"
+      }
+    );
+
+
+  const firstDay =
+    new Date(
+      year,
+      month,
+      1
+    ).getDay();
+
+
+  const daysInMonth =
+    new Date(
+      year,
+      month + 1,
+      0
+    ).getDate();
+
+
+  let html = `
+    <div class="calendar-grid">
+
+      <div class="calendar-day-name">Sun</div>
+      <div class="calendar-day-name">Mon</div>
+      <div class="calendar-day-name">Tue</div>
+      <div class="calendar-day-name">Wed</div>
+      <div class="calendar-day-name">Thu</div>
+      <div class="calendar-day-name">Fri</div>
+      <div class="calendar-day-name">Sat</div>
+  `;
+
+
+  for (
+    let i = 0;
+    i < firstDay;
+    i++
+  ) {
+
+    html += `
+      <div class="calendar-day"></div>
+    `;
+
+  }
+
+
+  for (
+    let day = 1;
+    day <= daysInMonth;
+    day++
+  ) {
+
+    const date =
+      year +
+      "-" +
+      String(month + 1).padStart(2, "0") +
+      "-" +
+      String(day).padStart(2, "0");
+
+
+    const holiday =
+      holidays.find(
+        x => x.holiday_date === date
+      );
+
+
+    const dayLeaves =
+      leaves.filter(function (leave) {
+
+        return (
+          leave.status === "approved" &&
+          date >= leave.from_date &&
+          date <= leave.to_date
+        );
+
+      });
+
+
+    html += `
+      <div class="calendar-day">
+
+        <div class="calendar-date">
+          ${day}
+        </div>
+    `;
+
+
+    if (holiday) {
+
+      html += `
+        <div class="calendar-event calendar-holiday">
+          🎉 ${escapeHtml(
+            holiday.holiday_name
+          )}
+        </div>
+      `;
+
+    }
+
+
+    dayLeaves.forEach(function (leave) {
+
+      const employee =
+        leave.employees ||
+        employees.find(
+          x => x.id === leave.employee_id
+        );
+
+
+      html += `
+        <div class="calendar-event">
+          ${escapeHtml(
+            employee?.full_name || "Leave"
+          )}
+        </div>
+      `;
+
+    });
+
+
+    html += `
+      </div>
+    `;
+
+  }
+
+
+  html += `
+    </div>
+  `;
+
+
+  container.innerHTML = html;
+
+}
+
+
+/* =========================================================
+   REPORTS
+========================================================= */
+
+function renderReports() {
+
+  const table =
+    document.getElementById(
+      "reportsTable"
+    );
+
+
+  const role =
+    currentEmployee?.role;
+
+
+  let data =
+    leaves.filter(function (leave) {
+
+      if (role === "admin") {
+        return true;
+      }
+
+
+      if (role === "manager") {
+
+        const employee =
+          leave.employees ||
+          employees.find(
+            x => x.id === leave.employee_id
+          );
+
+
+        return (
+          employee?.department ===
+          currentEmployee.department
+        );
+
+      }
+
+
+      return (
+        leave.employee_id ===
+        currentEmployee.id
+      );
+
+    });
+
+
+  document.getElementById(
+    "reportTotal"
+  ).textContent =
+    data.length;
+
+
+  document.getElementById(
+    "reportApproved"
+  ).textContent =
+    data
+      .filter(
+        x => x.status === "approved"
+      )
+      .reduce(
+        (sum, x) =>
+          sum + Number(x.total_days || 0),
+        0
+      );
+
+
+  document.getElementById(
+    "reportPending"
+  ).textContent =
+    data
+      .filter(
+        x => x.status === "pending"
+      )
+      .reduce(
+        (sum, x) =>
+          sum + Number(x.total_days || 0),
+        0
+      );
+
+
+  document.getElementById(
+    "reportRejected"
+  ).textContent =
+    data
+      .filter(
+        x => x.status === "rejected"
+      )
+      .reduce(
+        (sum, x) =>
+          sum + Number(x.total_days || 0),
+        0
+      );
+
+
+  if (data.length === 0) {
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="7">
+          <div class="empty-state">
+            No report data available.
+          </div>
+        </td>
+      </tr>
+    `;
+
+    return;
+
+  }
+
+
+  table.innerHTML =
+    data.map(function (leave) {
+
+      const employee =
+        leave.employees ||
+        employees.find(
+          x => x.id === leave.employee_id
+        );
+
+
+      return `
+        <tr>
+
+          <td>
+            ${escapeHtml(
+              employee?.full_name || "-"
+            )}
+          </td>
+
+          <td>
+            ${escapeHtml(
+              employee?.department || "-"
+            )}
+          </td>
+
+          <td>
+            ${escapeHtml(
+              leave.leave_types?.name ||
+              getLeaveTypeName(
+                leave.leave_type_id
+              )
+            )}
+          </td>
+
+          <td>
+            ${formatDate(
+              leave.from_date
+            )}
+          </td>
+
+          <td>
+            ${formatDate(
+              leave.to_date
+            )}
+          </td>
+
+          <td>
+            ${leave.total_days}
+          </td>
+
+          <td>
+            ${statusBadge(
+              leave.status
+            )}
+          </td>
+
+        </tr>
+      `;
+
+    }).join("");
+
+}
+
+
+/* =========================================================
+   EXPORT REPORT
+========================================================= */
+
+document
+  .getElementById("exportReportBtn")
+  .addEventListener("click", function () {
+
+    let data =
+      leaves.map(function (leave) {
+
+        const employee =
+          leave.employees ||
+          employees.find(
+            x => x.id === leave.employee_id
+          );
+
+
+        return {
+
+          Employee:
+            employee?.full_name || "",
+
+          Department:
+            employee?.department || "",
+
+          LeaveType:
+            leave.leave_types?.name ||
+            getLeaveTypeName(
+              leave.leave_type_id
+            ),
+
+          From:
+            leave.from_date,
+
+          To:
+            leave.to_date,
+
+          Days:
+            leave.total_days,
+
+          Status:
+            leave.status
+
+        };
+
+      });
+
+
+    exportCSV(
+      data,
+      "leave-report.csv"
+    );
+
+  });
+
+
+/* =========================================================
+   NOTIFICATIONS
+========================================================= */
+
+function renderNotifications() {
+
+  const container =
+    document.getElementById(
+      "notificationsContainer"
+    );
+
+
+  if (notifications.length === 0) {
+
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🔔</div>
+        No notifications.
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    notifications.map(function (notification) {
+
+      return `
+        <div class="notification">
+
+          <div class="notification-dot"></div>
+
+          <div>
+
+            <div class="notification-title">
+              ${escapeHtml(
+                notification.title
+              )}
+            </div>
+
+            <div class="notification-message">
+              ${escapeHtml(
+                notification.message
+              )}
+            </div>
+
+            <div class="notification-date">
+              ${formatDateTime(
+                notification.created_at
+              )}
+            </div>
+
+          </div>
+
+        </div>
+      `;
+
+    }).join("");
+
+}
+
+
+/* =========================================================
+   MARK NOTIFICATIONS READ
+========================================================= */
+
+document
+  .getElementById("markAllReadBtn")
+  .addEventListener(
+    "click",
+    async function () {
+
+      if (currentUser?.demo) {
+
+        notifications.forEach(
+          x => x.is_read = true
+        );
+
+        renderNotifications();
+
+        showToast("Notifications marked as read.");
+
+        return;
+
+      }
+
+
+      const { error } =
+        await supabaseClient
+          .from("notifications")
+          .update({
+            is_read: true
+          })
+          .eq(
+            "employee_id",
+            currentEmployee.id
+          );
+
+
+      if (error) {
+
+        console.error(error);
+
+        showToast(
+          "Unable to update notifications."
+        );
+
+        return;
+
+      }
+
+
+      await loadNotifications();
+
+      renderNotifications();
+
+      showToast(
+        "Notifications marked as read."
+      );
+
+    }
+  );
+
+
+/* =========================================================
+   CREATE NOTIFICATION
+========================================================= */
+
+async function createNotification(
+  employeeId,
+  title,
+  message,
+  type
+) {
+
+  if (currentUser?.demo) {
+    return;
+  }
+
+
+  const { error } =
+    await supabaseClient
+      .from("notifications")
+      .insert({
+
+        employee_id: employeeId,
+
+        title: title,
+
+        message: message,
+
+        notification_type: type,
+
+        is_read: false
+
+      });
+
+
+  if (error) {
+
+    console.error(
+      "Notification error:",
+      error
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   AUDIT LOG
+========================================================= */
+
+async function createAuditLog(
+  employeeId,
+  action,
+  module,
+  description
+) {
+
+  if (currentUser?.demo) {
+    return;
+  }
+
+
+  const { error } =
+    await supabaseClient
+      .from("audit_logs")
+      .insert({
+
+        employee_id: employeeId,
+
+        action: action,
+
+        module: module,
+
+        description: description
+
+      });
+
+
+  if (error) {
+
+    console.error(
+      "Audit error:",
+      error
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   SETTINGS
+========================================================= */
+
+async function loadSettings() {
+
+  const { data, error } =
+    await supabaseClient
+      .from("company_settings")
+      .select("*")
+      .eq("id", 1)
+      .maybeSingle();
+
+
+  if (error) {
+
+    console.error(
+      "Load settings error:",
+      error
+    );
+
+    showToast(
+      "Unable to load settings: " +
+      error.message
+    );
+
+    return;
+
+  }
+
+
+  const settings = data || {};
+
+
+  document.getElementById(
+    "companyName"
+  ).value =
+    settings.company_name ||
+    "My Company";
+
+
+  document.getElementById(
+    "workingDays"
+  ).value =
+    settings.working_days ||
+    "Monday,Tuesday,Wednesday,Thursday,Friday";
+
+
+  document.getElementById(
+    "fyStart"
+  ).value =
+    settings.fy_start ||
+    "04";
+
+
+  document.getElementById(
+    "carryForward"
+  ).value =
+    settings.carry_forward ||
+    "yes";
+
+}
+
+
+async function saveSettings(event) {
+
+  event.preventDefault();
+
+
+  if (
+    currentEmployee?.role !== "admin"
+  ) {
+
+    showToast(
+      "Administrator access required."
+    );
+
+    return;
+
+  }
+
+
+  const settings = {
+
+    id: 1,
+
+    company_name:
+      document.getElementById(
+        "companyName"
+      ).value.trim(),
+
+    working_days:
+      document.getElementById(
+        "workingDays"
+      ).value.trim(),
+
+    fy_start:
+      document.getElementById(
+        "fyStart"
+      ).value,
+
+    carry_forward:
+      document.getElementById(
+        "carryForward"
+      ).value,
+
+    updated_at:
+      new Date().toISOString()
+
+  };
+
+
+  const { error } =
+    await supabaseClient
+      .from("company_settings")
+      .upsert(settings);
+
+
+  if (error) {
+
+    console.error(
+      "Save settings error:",
+      error
+    );
+
+    showToast(
+      "Unable to save settings: " +
+      error.message
+    );
+
+    return;
+
+  }
+
+
+  showToast(
+    "Settings saved successfully."
+  );
+
+}
+
+
+/* =========================================================
+   FINANCIAL YEAR
+========================================================= */
+
+function getFinancialYear() {
+
+  const today =
+    new Date();
+
+  const year =
+    today.getFullYear();
+
+  const month =
+    today.getMonth() + 1;
+
+
+  if (month >= 4) {
+
+    return (
+      year +
+      "-" +
+      (year + 1)
+    );
+
+  }
+
+
+  return (
+    (year - 1) +
+    "-" +
+    year
+  );
+
+}
+
+
+/* =========================================================
+   MODALS
+========================================================= */
+
+function openModal(id) {
+
+  document
+    .getElementById(id)
+    .classList.add("show");
+
+}
+
+
+function closeModal(id) {
+
+  document
+    .getElementById(id)
+    .classList.remove("show");
+
+}
+
+
+/* Close modal when clicking outside */
+
+document
+  .querySelectorAll(".modal-overlay")
+  .forEach(function (overlay) {
+
+    overlay.addEventListener(
+      "click",
+      function (event) {
+
+        if (
+          event.target === overlay
+        ) {
+
+          overlay.classList.remove(
+            "show"
+          );
+
+        }
+
+      }
+    );
+
+  });
+
+
+/* =========================================================
+   MOBILE MENU
+========================================================= */
+
+function setupMobileMenu() {
+
+  document
+    .getElementById("mobileMenuBtn")
+    .addEventListener(
+      "click",
+      function () {
+
+        document
+          .getElementById("sidebar")
+          .classList.toggle("open");
+
+      }
+    );
+
+}
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+let toastTimer = null;
+
+
+function showToast(message) {
+
+  const toast =
+    document.getElementById("toast");
+
+
+  toast.textContent =
+    message;
+
+
+  toast.classList.add("show");
+
+
+  clearTimeout(
+    toastTimer
+  );
+
+
+  toastTimer =
+    setTimeout(
+      function () {
+
+        toast.classList.remove(
+          "show"
+        );
+
+      },
+      3000
+    );
+
+}
+
+
+/* =========================================================
+   STATUS BADGE
+========================================================= */
+
+function statusBadge(status) {
+
+  const safeStatus =
+    status || "pending";
+
+
+  return `
+    <span class="badge badge-${safeStatus}">
+      ${capitalize(
+        safeStatus
+      )}
+    </span>
+  `;
+
+}
+
+
+/* =========================================================
+   LEAVE TYPE NAME
+========================================================= */
+
+function getLeaveTypeName(id) {
+
+  const type =
+    leaveTypes.find(
+      x => x.id === id
+    );
+
+
+  return type
+    ? type.name
+    : "Unknown";
+
+}
+
+
+/* =========================================================
+   FORMAT DATE
+========================================================= */
+
+function formatDate(dateString) {
+
+  if (!dateString) {
+    return "-";
+  }
+
+
+  const date =
+    new Date(
+      dateString + "T00:00:00"
+    );
+
+
+  return date.toLocaleDateString(
+    "en-IN",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    }
+  );
+
+}
+
+
+/* =========================================================
+   FORMAT DATETIME
+========================================================= */
+
+function formatDateTime(value) {
+
+  if (!value) {
+    return "-";
+  }
+
+
+  return new Date(
+    value
+  ).toLocaleString(
+    "en-IN",
+    {
+      dateStyle: "medium",
+      timeStyle: "short"
+    }
+  );
+
+}
+
+
+/* =========================================================
+   CAPITALIZE
+========================================================= */
+
+function capitalize(value) {
+
+  if (!value) return "";
+
+  return (
+    value.charAt(0).toUpperCase() +
+    value.slice(1)
+  );
+
+}
+
+
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
+
+function escapeHtml(value) {
+
+  if (
+    value === null ||
+    value === undefined
+  ) {
+
+    return "";
+
+  }
+
+
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+}
+
+
+/* =========================================================
+   CSV EXPORT
+========================================================= */
+
+function exportCSV(
+  rows,
+  filename
+) {
+
+  if (
+    !rows ||
+    rows.length === 0
+  ) {
+
+    showToast(
+      "No data available for export."
+    );
+
+    return;
+
+  }
+
+
+  const headers =
+    Object.keys(
+      rows[0]
+    );
+
+
+  const csvRows = [];
+
+
+  csvRows.push(
+    headers.join(",")
+  );
+
+
+  rows.forEach(function (row) {
+
+    const values =
+      headers.map(function (header) {
+
+        const value =
+          row[header] ?? "";
+
+
+        return (
+          '"' +
+          String(value)
+            .replaceAll('"', '""') +
+          '"'
+        );
+
+      });
+
+
+    csvRows.push(
+      values.join(",")
+    );
+
+  });
+
+
+  const blob =
+    new Blob(
+      [
+        csvRows.join("\n")
+      ],
+      {
+        type:
+          "text/csv;charset=utf-8;"
+      }
+    );
+
+
+  const url =
+    URL.createObjectURL(blob);
+
+
+  const link =
+    document.createElement("a");
+
+
+  link.href = url;
+
+  link.download =
+    filename;
+
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  link.remove();
+
+  URL.revokeObjectURL(url);
+
+}
+
+
+/* =========================================================
+   END
+========================================================= */
+
+
+  </script>
+
+</body>
+</html>
