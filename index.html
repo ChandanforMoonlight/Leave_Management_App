@@ -466,6 +466,27 @@
       color: #166534;
     }
 
+    .badge-on_notice {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-resigned {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .badge-inactive {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .badge-h-national { background: #dbeafe; color: #1e40af; }
+    .badge-h-festival { background: #fce7f3; color: #9d174d; }
+    .badge-h-company { background: #dcfce7; color: #166534; }
+    .badge-h-optional { background: #fef3c7; color: #92400e; }
+    .badge-h-restricted { background: #e5e7eb; color: #374151; }
+
     /* =========================
        FORM GRID
     ========================= */
@@ -732,6 +753,83 @@
       .calendar-event {
         font-size: 8px;
       }
+
+      /* Prevent iOS Safari from auto-zooming when an input is focused */
+      input,
+      select,
+      textarea {
+        font-size: 16px !important;
+      }
+
+      .card {
+        padding: 16px;
+      }
+
+      .card-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .card-header > * {
+        width: 100%;
+      }
+
+      .card-title {
+        margin-bottom: 4px;
+      }
+
+      .modal-overlay {
+        padding: 0;
+        align-items: flex-end;
+      }
+
+      .modal {
+        max-width: 100%;
+        width: 100%;
+        max-height: 92vh;
+        border-radius: 16px 16px 0 0;
+        padding: 18px;
+      }
+
+      .form-actions {
+        flex-direction: column-reverse;
+      }
+
+      .form-actions .btn {
+        width: 100%;
+        padding: 12px 14px;
+        font-size: 14px;
+      }
+
+      .btn {
+        padding: 10px 14px;
+      }
+
+      th,
+      td {
+        padding: 10px 8px;
+        font-size: 12px;
+      }
+
+      .topbar {
+        height: 60px;
+      }
+
+      .page-title {
+        font-size: 17px;
+      }
+
+      .sidebar-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.45);
+        z-index: 19;
+      }
+
+      .sidebar-backdrop.show {
+        display: block;
+      }
     }
   </style>
 </head>
@@ -839,9 +937,14 @@
         <span>Leave Types</span>
       </div>
 
-      <div class="nav-item admin-only" data-page="holidays">
+      <div class="nav-item" data-page="holidays">
         <span class="nav-icon">🎉</span>
         <span>Holidays</span>
+      </div>
+
+      <div class="nav-item manager-admin-only" data-page="teamAvailability">
+        <span class="nav-icon">🧑‍🤝‍🧑</span>
+        <span>Team Availability</span>
       </div>
 
       <div class="nav-item manager-admin-only" data-page="reports">
@@ -852,11 +955,17 @@
       <div class="nav-item" data-page="notifications">
         <span class="nav-icon">🔔</span>
         <span>Notifications</span>
+        <span id="notificationBadge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;"></span>
       </div>
 
       <div class="nav-item admin-only" data-page="settings">
         <span class="nav-icon">⚙️</span>
         <span>Settings</span>
+      </div>
+
+      <div class="nav-item admin-only" data-page="auditLog">
+        <span class="nav-icon">📜</span>
+        <span>Audit Log</span>
       </div>
 
       <div
@@ -869,6 +978,9 @@
       </div>
 
     </aside>
+
+
+    <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
 
 
     <!-- MAIN -->
@@ -1266,6 +1378,7 @@
 
                   <tr>
                     <th>Employee</th>
+                    <th>Reporting Manager</th>
                     <th>Leave Type</th>
                     <th>From</th>
                     <th>To</th>
@@ -1320,12 +1433,17 @@
                 <thead>
 
                   <tr>
+                    <th>Emp ID</th>
                     <th>Name</th>
                     <th>Email</th>
                     <th>Department</th>
                     <th>Designation</th>
+                    <th>Reporting Manager</th>
+                    <th>Location</th>
+                    <th>Type</th>
                     <th>Role</th>
                     <th>Status</th>
+                    <th>Action</th>
                   </tr>
 
                 </thead>
@@ -1375,9 +1493,13 @@
                   <tr>
                     <th>Name</th>
                     <th>Code</th>
-                    <th>Default Days</th>
+                    <th>Annual Days</th>
+                    <th>Max Carry Fwd</th>
+                    <th>Max Consecutive</th>
+                    <th>Negative Balance</th>
                     <th>Paid</th>
                     <th>Status</th>
+                    <th>Action</th>
                   </tr>
 
                 </thead>
@@ -1404,16 +1526,19 @@
 
             <div class="card-header">
 
-              <div class="card-title">
-                Company Holidays
-              </div>
+              <div class="card-title">Holidays</div>
 
-              <button
-                class="btn btn-primary"
-                onclick="openHolidayModal()"
-              >
-                + Add Holiday
-              </button>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+
+                <select id="holidayYearFilter" onchange="renderHolidays()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;"></select>
+
+                <select id="holidayLocationFilter" onchange="renderHolidays()" style="display:none;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;"></select>
+
+                <button id="addHolidayBtn" class="btn btn-primary" onclick="openHolidayModal()" style="display:none;">
+                  + Add Holiday
+                </button>
+
+              </div>
 
             </div>
 
@@ -1423,13 +1548,15 @@
               <table>
 
                 <thead>
-
                   <tr>
                     <th>Holiday</th>
                     <th>Date</th>
+                    <th>Day</th>
+                    <th>Type</th>
+                    <th>Location</th>
                     <th>Description</th>
+                    <th>Action</th>
                   </tr>
-
                 </thead>
 
                 <tbody id="holidaysTable">
@@ -1438,6 +1565,46 @@
               </table>
 
             </div>
+
+            <div id="holidayFootnote" style="font-size:12px;color:#6b7280;padding:12px 4px 0;"></div>
+
+          </div>
+
+        </div>
+
+
+        <!-- =================================================
+             TEAM AVAILABILITY
+        ================================================== -->
+
+        <div id="page-teamAvailability" class="page">
+
+          <div class="card">
+
+            <div class="card-header">
+
+              <div class="card-title">Team Availability</div>
+
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+
+                <input
+                  type="date"
+                  id="availabilityDate"
+                  onchange="renderTeamAvailability()"
+                  style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;"
+                >
+
+                <select
+                  id="availabilityDeptFilter"
+                  onchange="renderTeamAvailability()"
+                  style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;"
+                ></select>
+
+              </div>
+
+            </div>
+
+            <div id="availabilityContent"></div>
 
           </div>
 
@@ -1641,6 +1808,24 @@
               </div>
 
 
+              <div class="form-group full-width">
+
+                  <label>Max Employees on Leave Together (per department)</label>
+
+                  <input
+                    type="number"
+                    id="maxSimultaneousLeave"
+                    min="1"
+                    step="1"
+                  >
+
+                  <small style="color:#6b7280;">
+                    Team Availability shows a warning when this many (or more) people
+                    from the same department are on approved leave on the same day.
+                  </small>
+
+                </div>
+
               <div class="form-actions">
 
                 <button
@@ -1653,6 +1838,92 @@
               </div>
 
             </form>
+
+          </div>
+
+          <div class="card" style="margin-top:20px;">
+
+            <div class="card-header">
+              <div class="card-title">Year-End Rollover</div>
+            </div>
+
+            <p style="font-size:13px;color:#6b7280;margin-bottom:14px;">
+              Creates leave balances for the current financial year from the previous one:
+              annual allocation + carry forward (up to each leave type's Max Carry Forward).
+              Anything above the limit expires. Existing balances are never overwritten.
+              Run this once, at the start of the financial year (1 April).
+            </p>
+
+            <button
+              type="button"
+              class="btn btn-warning"
+              onclick="runYearEndRollover()"
+            >
+              Run Year-End Rollover
+            </button>
+
+            <div id="rolloverResult" style="margin-top:12px;font-size:13px;"></div>
+
+          </div>
+
+        </div>
+
+
+        <!-- =================================================
+             AUDIT LOG
+        ================================================== -->
+
+        <div id="page-auditLog" class="page">
+
+          <div class="card">
+
+            <div class="card-header">
+
+              <div class="card-title">Audit Log</div>
+
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+
+                <select id="auditModuleFilter" onchange="renderAuditLog()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;">
+                  <option value="">All modules</option>
+                  <option value="Employee">Employee</option>
+                  <option value="Leave">Leave</option>
+                  <option value="LeaveType">Leave Type</option>
+                  <option value="Holiday">Holiday</option>
+                  <option value="Settings">Settings</option>
+                </select>
+
+                <input type="date" id="auditFromDate" onchange="renderAuditLog()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;">
+
+                <input type="date" id="auditToDate" onchange="renderAuditLog()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;">
+
+                <input type="text" id="auditSearch" oninput="renderAuditLog()" placeholder="Search employee or text..." style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;min-width:200px;">
+
+              </div>
+
+            </div>
+
+            <div class="table-wrapper">
+
+              <table>
+
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Who</th>
+                    <th>Action</th>
+                    <th>Module</th>
+                    <th>Details</th>
+                    <th>Change</th>
+                    <th>IP Address</th>
+                  </tr>
+                </thead>
+
+                <tbody id="auditLogTable">
+                </tbody>
+
+              </table>
+
+            </div>
 
           </div>
 
@@ -1676,9 +1947,7 @@
 
       <div class="modal-header">
 
-        <div class="modal-title">
-          Add Employee
-        </div>
+        <div class="modal-title" id="employeeModalTitle">Add Employee</div>
 
         <button
           class="modal-close"
@@ -1693,6 +1962,11 @@
       <form id="employeeForm">
 
         <div class="form-grid">
+
+          <div class="form-group">
+            <label>Employee ID</label>
+            <input type="text" id="employeeCode" placeholder="EMP001">
+          </div>
 
           <div class="form-group">
             <label>Full Name</label>
@@ -1721,28 +1995,62 @@
 
           <div class="form-group">
             <label>Role</label>
-
             <select id="employeeRole">
-
-              <option value="employee">
-                Employee
-              </option>
-
-              <option value="manager">
-                Manager
-              </option>
-
-              <option value="admin">
-                Administrator
-              </option>
-
+              <option value="employee">Employee</option>
+              <option value="manager">Manager</option>
+              <option value="admin">Administrator</option>
             </select>
+          </div>
 
+          <div class="form-group">
+            <label>Reporting Manager</label>
+            <select id="employeeManager"></select>
           </div>
 
           <div class="form-group">
             <label>Joining Date</label>
             <input type="date" id="employeeJoiningDate">
+          </div>
+
+          <div class="form-group">
+            <label>Location</label>
+            <input type="text" id="employeeLocation" list="locationOptions" placeholder="e.g. Delhi Office">
+            <datalist id="locationOptions">
+              <option value="Delhi Office"></option>
+              <option value="Mumbai Office"></option>
+              <option value="Bangalore Office"></option>
+            </datalist>
+          </div>
+
+          <div class="form-group">
+            <label>Employment Type</label>
+            <select id="employeeType">
+              <option value="Full-time">Full-time</option>
+              <option value="Part-time">Part-time</option>
+              <option value="Contract">Contract</option>
+              <option value="Intern">Intern</option>
+              <option value="Consultant">Consultant</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Status</label>
+            <select id="employeeStatus">
+              <option value="active">Active</option>
+              <option value="on_notice">On Notice</option>
+              <option value="resigned">Resigned</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
+          <div class="full-width">
+            <div id="employeeBalanceTitle" style="font-weight:700;margin-top:6px;">Leave Balance</div>
+          </div>
+
+          <div id="employeeBalanceFields" class="form-grid full-width"></div>
+
+          <div id="employeeLoginHint" class="full-width" style="font-size:12px;color:#6b7280;">
+            Note: Employee ko login dene ke liye Supabase → Authentication mein isi email se user alag se banana hoga (Auto Confirm tick karke).
           </div>
 
         </div>
@@ -1784,9 +2092,7 @@
 
       <div class="modal-header">
 
-        <div class="modal-title">
-          Add Leave Type
-        </div>
+        <div class="modal-title" id="leaveTypeModalTitle">Add Leave Type</div>
 
         <button
           class="modal-close"
@@ -1813,43 +2119,51 @@
           </div>
 
           <div class="form-group">
-            <label>Default Days</label>
-            <input
-              type="number"
-              id="leaveTypeDays"
-              min="0"
-              step="0.5"
-              required
-            >
+            <label>Annual Allocation (days / year)</label>
+            <input type="number" id="leaveTypeDays" min="0" step="0.5" required>
           </div>
 
           <div class="form-group">
-
             <label>Paid Leave</label>
-
             <select id="leaveTypePaid">
-
-              <option value="true">
-                Yes
-              </option>
-
-              <option value="false">
-                No
-              </option>
-
+              <option value="true">Yes</option>
+              <option value="false">No (no balance limit)</option>
             </select>
+          </div>
 
+          <div class="form-group">
+            <label>Max Carry Forward (days)</label>
+            <input type="number" id="leaveTypeCarry" min="0" step="0.5" value="0">
+          </div>
+
+          <div class="form-group">
+            <label>Max Consecutive Days (blank = no limit)</label>
+            <input type="number" id="leaveTypeMaxConsecutive" min="0" step="0.5">
+          </div>
+
+          <div class="form-group">
+            <label>Allow Negative Balance</label>
+            <select id="leaveTypeNegative">
+              <option value="false">No</option>
+              <option value="true">Yes</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Status</label>
+            <select id="leaveTypeStatus">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
           </div>
 
           <div class="form-group full-width">
-
             <label>Description</label>
+            <textarea id="leaveTypeDescription" rows="3"></textarea>
+          </div>
 
-            <textarea
-              id="leaveTypeDescription"
-              rows="3"
-            ></textarea>
-
+          <div class="full-width" style="font-size:12px;color:#6b7280;">
+            Unused balance above "Max Carry Forward" expires at financial year end (31 Mar) when Year-End Rollover is run from Settings.
           </div>
 
         </div>
@@ -1891,9 +2205,7 @@
 
       <div class="modal-header">
 
-        <div class="modal-title">
-          Add Holiday
-        </div>
+        <div class="modal-title" id="holidayModalTitle">Add Holiday</div>
 
         <button
           class="modal-close"
@@ -1907,40 +2219,45 @@
 
       <form id="holidayForm">
 
-        <div class="form-group">
+        <div class="form-grid">
 
-          <label>Holiday Name</label>
+          <div class="form-group">
+            <label>Holiday Name</label>
+            <input type="text" id="holidayName" required>
+          </div>
 
-          <input
-            type="text"
-            id="holidayName"
-            required
-          >
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="holidayDate" required>
+          </div>
 
-        </div>
+          <div class="form-group">
+            <label>Type</label>
+            <select id="holidayType">
+              <option value="national">National</option>
+              <option value="festival">Festival</option>
+              <option value="company">Company</option>
+              <option value="optional">Optional</option>
+              <option value="restricted">Restricted</option>
+            </select>
+          </div>
 
+          <div class="form-group">
+            <label>Location (blank = all offices)</label>
+            <input type="text" id="holidayLocation" list="holidayLocationOptions" placeholder="e.g. Delhi Office">
+            <datalist id="holidayLocationOptions"></datalist>
+          </div>
 
-        <div class="form-group">
+          <div class="form-group full-width">
+            <label>Description</label>
+            <textarea id="holidayDescription" rows="3"></textarea>
+          </div>
 
-          <label>Holiday Date</label>
-
-          <input
-            type="date"
-            id="holidayDate"
-            required
-          >
-
-        </div>
-
-
-        <div class="form-group">
-
-          <label>Description</label>
-
-          <textarea
-            id="holidayDescription"
-            rows="3"
-          ></textarea>
+          <div class="full-width" style="font-size:12px;color:#6b7280;">
+            National, Festival and Company holidays are non-working days (not counted as leave).
+            Optional and Restricted holidays stay working days unless the employee takes leave.
+            Location must match the Location set on the employee profile.
+          </div>
 
         </div>
 
@@ -2016,6 +2333,8 @@ let currentEmployee = null;
 
 let leaveTypes = [];
 let employees = [];
+let editingEmployeeId = null;
+let employeeBlockedStatus = null;
 let leaves = [];
 let holidays = [];
 let notifications = [];
@@ -2189,7 +2508,9 @@ document.getElementById("loginForm").addEventListener(
         if (!currentEmployee) {
 
           message.textContent =
-            "Login successful, but employee profile is not created yet.";
+            employeeBlockedStatus
+              ? "Your account is " + employeeBlockedStatus + ". Please contact HR."
+              : "Login successful, but employee profile is not created yet.";
 
           await supabaseClient.auth.signOut();
 
@@ -2282,6 +2603,8 @@ document.getElementById("loginForm").addEventListener(
 
 async function loadEmployeeProfile() {
 
+  employeeBlockedStatus = null;
+
   if (!currentUser || currentUser.demo) {
     return;
   }
@@ -2308,6 +2631,21 @@ async function loadEmployeeProfile() {
   }
 
 
+  employeeBlockedStatus = null;
+
+  if (
+    data &&
+    (data.status === "resigned" || data.status === "inactive")
+  ) {
+
+    employeeBlockedStatus = data.status;
+
+    currentEmployee = null;
+
+    return;
+
+  }
+
   currentEmployee = data;
 }
 
@@ -2316,7 +2654,30 @@ async function loadEmployeeProfile() {
    START APPLICATION
 ========================================================= */
 
+let clientIp = null;
+
+async function captureClientIp() {
+
+  try {
+
+    const res = await fetch("https://api.ipify.org?format=json");
+
+    const json = await res.json();
+
+    clientIp = json.ip || null;
+
+  } catch (e) {
+
+    clientIp = null;
+
+  }
+
+}
+
 async function startApplication() {
+
+  captureClientIp();
+
 
   document.getElementById("loginScreen").style.display =
     "none";
@@ -2334,6 +2695,8 @@ async function startApplication() {
   populateLeaveTypeDropdown();
 
   showPage("dashboard");
+
+  startNotificationPolling();
 
 }
 
@@ -2492,6 +2855,13 @@ function setupNavigation() {
           .getElementById("sidebar")
           .classList.remove("open");
 
+        const backdrop =
+          document.getElementById("sidebarBackdrop");
+
+        if (backdrop) {
+          backdrop.classList.remove("show");
+        }
+
       });
 
     });
@@ -2538,8 +2908,9 @@ function showPage(pageName) {
   if (
     (
       pageName === "leaveTypes" ||
-      pageName === "holidays" ||
-      pageName === "settings"
+      pageName === "settings" ||
+      pageName === "auditLog" ||
+      pageName === "teamAvailability"
     ) &&
     role !== "admin"
   ) {
@@ -2627,6 +2998,16 @@ function showPage(pageName) {
 
   if (pageName === "notifications") {
     renderNotifications();
+    loadNotifications().then(renderNotifications);
+  }
+
+  if (pageName === "auditLog") {
+    renderAuditLog();
+    loadAuditLogs().then(renderAuditLog);
+  }
+
+  if (pageName === "teamAvailability") {
+    renderTeamAvailability();
   }
 
   if (pageName === "settings") {
@@ -2889,6 +3270,405 @@ async function loadHolidays() {
    LOAD NOTIFICATIONS
 ========================================================= */
 
+async function runYearEndRollover() {
+
+  if (currentEmployee?.role !== "admin") {
+
+    showToast("Administrator access required.");
+
+    return;
+
+  }
+
+  const fy = getFinancialYear();
+
+  const startYear = parseInt(fy.split("-")[0], 10);
+
+  const prevFy = (startYear - 1) + "-" + startYear;
+
+  if (
+    !confirm(
+      "Create leave balances for FY " + fy +
+      " using carry forward from FY " + prevFy +
+      "?\n\nExisting FY " + fy + " balances will not be changed."
+    )
+  ) {
+    return;
+  }
+
+  const box = document.getElementById("rolloverResult");
+
+  box.textContent = "Working...";
+
+  const prev =
+    await supabaseClient
+      .from("leave_balances")
+      .select("*")
+      .eq("financial_year", prevFy);
+
+  const cur =
+    await supabaseClient
+      .from("leave_balances")
+      .select("*")
+      .eq("financial_year", fy);
+
+  if (prev.error || cur.error) {
+
+    const message = (prev.error || cur.error).message;
+
+    box.textContent = "Failed: " + message;
+
+    showToast("Rollover failed: " + message);
+
+    return;
+
+  }
+
+  const types =
+    leaveTypes.filter(function (t) {
+      return (t.status || "active") === "active" && t.is_paid !== false;
+    });
+
+  const people =
+    employees.filter(function (e) {
+      return e.status !== "resigned" && e.status !== "inactive";
+    });
+
+  const rows = [];
+
+  let carriedTotal = 0;
+
+  let expiredTotal = 0;
+
+  people.forEach(function (person) {
+
+    types.forEach(function (type) {
+
+      const exists =
+        cur.data.some(r =>
+          r.employee_id === person.id &&
+          r.leave_type_id === type.id
+        );
+
+      if (exists) return;
+
+      const old =
+        prev.data.find(r =>
+          r.employee_id === person.id &&
+          r.leave_type_id === type.id
+        );
+
+      let carry = 0;
+
+      if (old) {
+
+        const remaining =
+          Number(old.allocated_days || 0) +
+          Number(old.carried_forward || 0) -
+          getUsedDays(person.id, type.id, prevFy);
+
+        const unused = Math.max(remaining, 0);
+
+        carry = Math.min(unused, Number(type.max_carry_forward || 0));
+
+        carriedTotal += carry;
+
+        expiredTotal += unused - carry;
+
+      }
+
+      rows.push({
+        employee_id: person.id,
+        leave_type_id: type.id,
+        financial_year: fy,
+        allocated_days: Number(type.default_days || 0),
+        carried_forward: carry,
+        used_days: 0
+      });
+
+    });
+
+  });
+
+  if (rows.length === 0) {
+
+    box.textContent =
+      "Nothing to create. Balances already exist for FY " + fy + ".";
+
+    return;
+
+  }
+
+  const { error } =
+    await supabaseClient
+      .from("leave_balances")
+      .insert(rows);
+
+  if (error) {
+
+    box.textContent = "Failed: " + error.message;
+
+    showToast("Rollover failed: " + error.message);
+
+    return;
+
+  }
+
+  await loadLeaveBalances();
+
+  box.textContent =
+    "Done. Created " + rows.length + " balance(s) for FY " + fy +
+    ". Carried forward: " + carriedTotal +
+    " day(s). Expired: " + expiredTotal + " day(s).";
+
+  showToast("Year-end rollover completed.");
+
+}
+
+
+let maxSimultaneousLeave = 2;
+
+/* =========================================================
+   TEAM AVAILABILITY
+========================================================= */
+
+function isOnLeaveOnDate(employeeId, dateStr) {
+
+  return leaves.some(function (l) {
+
+    return (
+      l.employee_id === employeeId &&
+      l.status === "approved" &&
+      l.from_date <= dateStr &&
+      l.to_date >= dateStr
+    );
+
+  });
+
+}
+
+async function ensureMaxSimultaneousLeaveLoaded() {
+
+  if (currentUser?.demo) {
+    maxSimultaneousLeave = 2;
+    return;
+  }
+
+  if (lastLoadedSettings) {
+    maxSimultaneousLeave =
+      Number(lastLoadedSettings.max_simultaneous_leave || 2);
+    return;
+  }
+
+  const { data } =
+    await supabaseClient
+      .from("company_settings")
+      .select("max_simultaneous_leave")
+      .eq("id", 1)
+      .maybeSingle();
+
+  maxSimultaneousLeave =
+    Number((data && data.max_simultaneous_leave) || 2);
+
+}
+
+async function renderTeamAvailability() {
+
+  const content = document.getElementById("availabilityContent");
+
+  const dateInput = document.getElementById("availabilityDate");
+
+  const deptSelect = document.getElementById("availabilityDeptFilter");
+
+  if (!content) return;
+
+  if (!dateInput.value) {
+    dateInput.value = isoDate(new Date());
+  }
+
+  await ensureMaxSimultaneousLeaveLoaded();
+
+  const isAdmin = currentEmployee?.role === "admin";
+
+  const active =
+    employees.filter(function (e) {
+      return e.status !== "resigned" && e.status !== "inactive";
+    });
+
+  const myDept =
+    (getEmployeeById(currentEmployee.id) || {}).department || "";
+
+  const allDepts =
+    Array.from(
+      new Set(active.map(e => (e.department || "").trim()).filter(Boolean))
+    ).sort();
+
+  const visibleDepts =
+    isAdmin
+      ? allDepts
+      : allDepts.filter(d => d === myDept);
+
+  const previousDept = deptSelect.value;
+
+  deptSelect.innerHTML =
+    (isAdmin ? '<option value="">All departments</option>' : "") +
+    visibleDepts.map(d =>
+      `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`
+    ).join("");
+
+  deptSelect.disabled = !isAdmin;
+
+  deptSelect.value =
+    isAdmin ? (previousDept || "") : myDept;
+
+  const date = dateInput.value;
+
+  const deptsToShow =
+    isAdmin && !deptSelect.value
+      ? visibleDepts
+      : [deptSelect.value].filter(Boolean);
+
+  if (deptsToShow.length === 0) {
+
+    content.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🧑‍🤝‍🧑</div>
+        No department assigned to your profile yet.
+      </div>
+    `;
+
+    return;
+
+  }
+
+  content.innerHTML =
+    deptsToShow.map(function (dept) {
+
+      const people =
+        active.filter(e => (e.department || "").trim() === dept);
+
+      const onLeave =
+        people.filter(e => isOnLeaveOnDate(e.id, date));
+
+      const warning =
+        onLeave.length >= maxSimultaneousLeave
+          ? `
+            <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;
+                        padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;">
+              ⚠️ ${onLeave.length} employee(s) from ${escapeHtml(dept)} are on leave
+              on ${formatDate(date)} (limit: ${maxSimultaneousLeave}).
+            </div>
+          `
+          : "";
+
+      const rows =
+        people
+          .sort((a, b) => a.full_name.localeCompare(b.full_name))
+          .map(function (e) {
+
+            const onL = isOnLeaveOnDate(e.id, date);
+
+            return `
+              <tr>
+                <td>${escapeHtml(e.full_name)}</td>
+                <td>${escapeHtml(e.designation || "-")}</td>
+                <td>
+                  <span class="badge ${onL ? "badge-h-restricted" : "badge-active"}">
+                    ${onL ? "On Leave" : "Present"}
+                  </span>
+                </td>
+              </tr>
+            `;
+
+          }).join("");
+
+      return `
+        <div style="margin-bottom:24px;">
+
+          <div style="font-weight:700;margin-bottom:10px;">
+            ${escapeHtml(dept)}
+            <span style="font-weight:400;color:#6b7280;font-size:13px;">
+              (${onLeave.length} of ${people.length} on leave)
+            </span>
+          </div>
+
+          ${warning}
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Designation</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>${rows || '<tr><td colspan="3">No employees.</td></tr>'}</tbody>
+            </table>
+          </div>
+
+        </div>
+      `;
+
+    }).join("");
+
+}
+
+
+let notificationTimer = null;
+
+function updateNotificationBadge() {
+
+  const badge = document.getElementById("notificationBadge");
+
+  if (!badge) return;
+
+  const unread =
+    notifications.filter(n => !n.is_read).length;
+
+  badge.textContent = unread > 99 ? "99+" : String(unread);
+
+  badge.style.display = unread > 0 ? "inline-block" : "none";
+
+}
+
+function startNotificationPolling() {
+
+  if (notificationTimer) {
+    clearInterval(notificationTimer);
+  }
+
+  notificationTimer = setInterval(async function () {
+
+    if (
+      !currentEmployee ||
+      currentUser?.demo ||
+      document.getElementById("app").style.display === "none"
+    ) {
+      return;
+    }
+
+    const known = new Set(notifications.map(n => n.id));
+
+    await loadNotifications();
+
+    const fresh =
+      notifications.filter(n => !known.has(n.id) && !n.is_read);
+
+    if (fresh.length > 0) {
+      showToast("🔔 " + fresh[0].title + ": " + fresh[0].message);
+    }
+
+    const page = document.getElementById("page-notifications");
+
+    if (page && page.classList.contains("active")) {
+      renderNotifications();
+    }
+
+  }, 30000);
+
+}
+
 async function loadNotifications() {
 
   if (currentUser?.demo) {
@@ -2923,6 +3703,8 @@ async function loadNotifications() {
 
   notifications = data || [];
 
+  updateNotificationBadge();
+
 }
 
 
@@ -2956,8 +3738,7 @@ async function loadLeaveBalances() {
           code
         )
       `)
-      .eq("employee_id", currentEmployee.id)
-      .eq("financial_year", fy);
+      .eq("employee_id", currentEmployee.id);
 
 
   if (error) {
@@ -3061,6 +3842,16 @@ function calculateLeaveDays(
   durationType
 ) {
 
+  const offDates = new Set(
+    holidays
+      .filter(h =>
+        isNonWorkingHoliday(h) &&
+        holidayAppliesTo(h, getViewerLocation())
+      )
+      .map(h => h.holiday_date)
+  );
+
+
   if (
     !fromDate ||
     !toDate
@@ -3076,7 +3867,7 @@ function calculateLeaveDays(
     durationType === "second_half"
   ) {
 
-    return 0.5;
+    return offDates.has(fromDate) ? 0 : 0.5;
 
   }
 
@@ -3109,7 +3900,7 @@ function calculateLeaveDays(
       Saturday is currently counted as working day.
     */
 
-    if (day !== 0) {
+    if (day !== 0 && !offDates.has(isoDate(current))) {
       count++;
     }
 
@@ -3184,6 +3975,40 @@ async function submitLeave(event) {
     showToast("Please select valid dates.");
 
     return;
+
+  }
+
+
+  if (!currentUser?.demo) {
+
+    const policy =
+      checkLeavePolicy(leaveTypeId, fromDate, totalDays);
+
+    if (policy.error) {
+
+      showToast(policy.error);
+
+      return;
+
+    }
+
+    if (
+      policy.finalBalance !== null &&
+      policy.finalBalance !== undefined &&
+      policy.finalBalance < 0
+    ) {
+
+      if (
+        !confirm(
+          "This leave will make your " + policy.typeName +
+          " balance negative (" + policy.finalBalance +
+          " days). Do you want to continue?"
+        )
+      ) {
+        return;
+      }
+
+    }
 
   }
 
@@ -3301,6 +4126,9 @@ async function submitLeave(event) {
     "Your leave request has been submitted.",
     "leave_applied"
   );
+
+
+  await notifyApprovers(fromDate, toDate, totalDays);
 
 
   /*
@@ -3529,6 +4357,14 @@ async function cancelLeave(id) {
   );
 
 
+  await createAuditLog(
+    currentEmployee.id,
+    "CANCEL",
+    "Leave",
+    "Employee cancelled their own pending leave request."
+  );
+
+
   await loadAllData();
 
   renderMyLeaves();
@@ -3542,45 +4378,128 @@ async function cancelLeave(id) {
    APPROVALS
 ========================================================= */
 
+/* =========================================================
+   APPROVAL WORKFLOW: Employee -> Reporting Manager
+   (Admin = override / fallback when no manager is assigned)
+========================================================= */
+
+function getEmployeeById(id) {
+
+  return employees.find(x => x.id === id) || null;
+
+}
+
+function getActiveAdmins() {
+
+  return employees.filter(function (e) {
+
+    return (
+      e.role === "admin" &&
+      e.status !== "resigned" &&
+      e.status !== "inactive"
+    );
+
+  });
+
+}
+
+function canActOnLeave(leave) {
+
+  const me = currentEmployee;
+
+  if (!me || !leave) return false;
+
+  if (leave.status !== "pending") return false;
+
+
+  /* nobody approves their own leave,
+     except the only administrator */
+
+  if (leave.employee_id === me.id) {
+
+    return (
+      me.role === "admin" &&
+      getActiveAdmins().length <= 1
+    );
+
+  }
+
+
+  if (me.role === "admin") return true;
+
+
+  if (me.role === "manager") {
+
+    const requester = getEmployeeById(leave.employee_id);
+
+    return (
+      !!requester &&
+      requester.reporting_manager_id === me.id
+    );
+
+  }
+
+  return false;
+
+}
+
+async function notifyApprovers(fromDate, toDate, totalDays) {
+
+  const me =
+    getEmployeeById(currentEmployee.id) || currentEmployee;
+
+  let recipients = [];
+
+  if (me.reporting_manager_id) {
+
+    const manager = getEmployeeById(me.reporting_manager_id);
+
+    if (
+      manager &&
+      manager.status !== "resigned" &&
+      manager.status !== "inactive"
+    ) {
+      recipients = [manager];
+    }
+
+  }
+
+  if (recipients.length === 0) {
+
+    recipients =
+      getActiveAdmins().filter(a => a.id !== me.id);
+
+  }
+
+  for (const person of recipients) {
+
+    await createNotification(
+      person.id,
+      "New Leave Request",
+      me.full_name +
+        " has applied for " + totalDays +
+        " day(s) leave from " + formatDate(fromDate) +
+        " to " + formatDate(toDate) + ".",
+      "leave_applied"
+    );
+
+  }
+
+}
+
 function renderApprovals() {
 
   const table =
     document.getElementById("approvalsTable");
 
 
-  const role =
-    currentEmployee?.role;
-
-
-  let data =
+  const data =
     leaves.filter(function (leave) {
 
-      if (role === "admin") {
-
-        return leave.status === "pending";
-
-      }
-
-
-      if (role === "manager") {
-
-        const employee =
-          leave.employees ||
-          employees.find(
-            x => x.id === leave.employee_id
-          );
-
-
-        return (
-          leave.status === "pending" &&
-          employee?.department ===
-          currentEmployee.department
-        );
-
-      }
-
-
-      return false;
+      return (
+        leave.status === "pending" &&
+        canActOnLeave(leave)
+      );
 
     });
 
@@ -3589,7 +4508,7 @@ function renderApprovals() {
 
     table.innerHTML = `
       <tr>
-        <td colspan="8">
+        <td colspan="9">
           <div class="empty-state">
             <div class="empty-icon">✅</div>
             No pending approvals.
@@ -3608,10 +4527,15 @@ function renderApprovals() {
 
       const employee =
         leave.employees ||
-        employees.find(
-          x => x.id === leave.employee_id
-        );
+        getEmployeeById(leave.employee_id);
 
+      const requester =
+        getEmployeeById(leave.employee_id);
+
+      const managerName =
+        requester?.reporting_manager_id
+          ? getEmployeeName(requester.reporting_manager_id)
+          : "— (Admin)";
 
       const typeName =
         leave.leave_types?.name ||
@@ -3621,11 +4545,9 @@ function renderApprovals() {
       return `
         <tr>
 
-          <td>
-            ${escapeHtml(
-              employee?.full_name || "-"
-            )}
-          </td>
+          <td>${escapeHtml(employee?.full_name || "-")}</td>
+
+          <td>${escapeHtml(managerName)}</td>
 
           <td>${escapeHtml(typeName)}</td>
 
@@ -3680,12 +4602,11 @@ async function approveLeave(id) {
   if (!leave) return;
 
 
-  if (
-    currentEmployee.role !== "admin" &&
-    currentEmployee.role !== "manager"
-  ) {
+  if (!canActOnLeave(leave)) {
 
-    showToast("Permission denied.");
+    showToast(
+      "You are not the approver for this leave request."
+    );
 
     return;
 
@@ -3745,7 +4666,11 @@ async function approveLeave(id) {
   await createNotification(
     leave.employee_id,
     "Leave Approved",
-    "Your leave request has been approved.",
+    "Your leave request from " +
+      formatDate(leave.from_date) + " to " +
+      formatDate(leave.to_date) +
+      " has been approved by " +
+      currentEmployee.full_name + ".",
     "leave_approved"
   );
 
@@ -3773,6 +4698,26 @@ async function approveLeave(id) {
 
 async function rejectLeave(id) {
 
+  const leave =
+    leaves.find(
+      x => x.id === id
+    );
+
+
+  if (!leave) return;
+
+
+  if (!canActOnLeave(leave)) {
+
+    showToast(
+      "You are not the approver for this leave request."
+    );
+
+    return;
+
+  }
+
+
   const reason =
     prompt(
       "Enter rejection reason:"
@@ -3782,15 +4727,6 @@ async function rejectLeave(id) {
   if (reason === null) {
     return;
   }
-
-
-  const leave =
-    leaves.find(
-      x => x.id === id
-    );
-
-
-  if (!leave) return;
 
 
   if (currentUser?.demo) {
@@ -3840,7 +4776,12 @@ async function rejectLeave(id) {
   await createNotification(
     leave.employee_id,
     "Leave Rejected",
-    "Your leave request has been rejected.",
+    "Your leave request from " +
+      formatDate(leave.from_date) + " to " +
+      formatDate(leave.to_date) +
+      " has been rejected by " +
+      currentEmployee.full_name +
+      (reason ? ". Reason: " + reason : "."),
     "leave_rejected"
   );
 
@@ -3866,17 +4807,65 @@ async function rejectLeave(id) {
    EMPLOYEES
 ========================================================= */
 
+const EMPLOYEE_STATUS_LABELS = {
+  active: "Active",
+  on_notice: "On Notice",
+  resigned: "Resigned",
+  inactive: "Inactive"
+};
+
+function employeeStatusBadge(status) {
+
+  const safe = status || "active";
+
+  return `
+    <span class="badge badge-${escapeHtml(safe)}">
+      ${escapeHtml(EMPLOYEE_STATUS_LABELS[safe] || capitalize(safe))}
+    </span>
+  `;
+
+}
+
+function getEmployeeName(id) {
+
+  if (!id) return "-";
+
+  const person = employees.find(x => x.id === id);
+
+  return person ? person.full_name : "-";
+
+}
+
+function nextEmployeeCode() {
+
+  let max = 0;
+
+  employees.forEach(function (e) {
+
+    const m = /^EMP(\d+)$/i.exec(e.employee_code || "");
+
+    if (m) {
+      max = Math.max(max, parseInt(m[1], 10));
+    }
+
+  });
+
+  return "EMP" + String(max + 1).padStart(3, "0");
+
+}
+
 function renderEmployees() {
 
-  const table =
-    document.getElementById("employeesTable");
+  const table = document.getElementById("employeesTable");
+
+  const isAdmin = currentEmployee?.role === "admin";
 
 
   if (employees.length === 0) {
 
     table.innerHTML = `
       <tr>
-        <td colspan="6">
+        <td colspan="11">
           <div class="empty-state">
             <div class="empty-icon">👥</div>
             No employees found.
@@ -3890,52 +4879,29 @@ function renderEmployees() {
   }
 
 
-  table.innerHTML =
-    employees.map(function (employee) {
+  table.innerHTML = employees.map(function (employee) {
 
-      return `
-        <tr>
+    return `
+      <tr>
+        <td>${escapeHtml(employee.employee_code || "-")}</td>
+        <td>${escapeHtml(employee.full_name || "-")}</td>
+        <td>${escapeHtml(employee.email || "-")}</td>
+        <td>${escapeHtml(employee.department || "-")}</td>
+        <td>${escapeHtml(employee.designation || "-")}</td>
+        <td>${escapeHtml(getEmployeeName(employee.reporting_manager_id))}</td>
+        <td>${escapeHtml(employee.location || "-")}</td>
+        <td>${escapeHtml(employee.employment_type || "-")}</td>
+        <td>${escapeHtml(employee.role || "-")}</td>
+        <td>${employeeStatusBadge(employee.status)}</td>
+        <td>
+          ${isAdmin
+            ? `<button class="btn btn-secondary btn-sm" onclick="openEmployeeModal('${escapeHtml(employee.id)}')">Edit</button>`
+            : ""}
+        </td>
+      </tr>
+    `;
 
-          <td>
-            ${escapeHtml(
-              employee.full_name || "-"
-            )}
-          </td>
-
-          <td>
-            ${escapeHtml(
-              employee.email || "-"
-            )}
-          </td>
-
-          <td>
-            ${escapeHtml(
-              employee.department || "-"
-            )}
-          </td>
-
-          <td>
-            ${escapeHtml(
-              employee.designation || "-"
-            )}
-          </td>
-
-          <td>
-            ${escapeHtml(
-              employee.role || "-"
-            )}
-          </td>
-
-          <td>
-            ${statusBadge(
-              employee.status || "active"
-            )}
-          </td>
-
-        </tr>
-      `;
-
-    }).join("");
+  }).join("");
 
 }
 
@@ -3944,13 +4910,242 @@ function renderEmployees() {
    EMPLOYEE MODAL
 ========================================================= */
 
-function openEmployeeModal() {
+function fillManagerOptions(excludeId, selectedId) {
 
-  document
-    .getElementById("employeeForm")
-    .reset();
+  const select = document.getElementById("employeeManager");
+
+  const managers = employees.filter(function (e) {
+
+    if (e.id === excludeId) return false;
+
+    if (e.id === selectedId) return true;
+
+    return (
+      (e.role === "manager" || e.role === "admin") &&
+      e.status !== "resigned" &&
+      e.status !== "inactive"
+    );
+
+  });
+
+  select.innerHTML =
+    '<option value="">— None —</option>' +
+    managers.map(function (m) {
+      return `<option value="${escapeHtml(m.id)}">${escapeHtml(m.full_name)} (${escapeHtml(m.role || "")})</option>`;
+    }).join("");
+
+  select.value = selectedId || "";
+
+}
+
+
+async function renderEmployeeBalanceFields(employee) {
+
+  const box = document.getElementById("employeeBalanceFields");
+
+  const fy = getFinancialYear();
+
+  document.getElementById("employeeBalanceTitle").textContent =
+    "Leave Balance — FY " + fy;
+
+  const activeTypes = leaveTypes.filter(function (t) {
+    return (t.status || "active") === "active";
+  });
+
+  if (activeTypes.length === 0) {
+
+    box.innerHTML =
+      '<div style="font-size:12px;color:#6b7280;">No active leave types. Add leave types first.</div>';
+
+    return;
+
+  }
+
+  box.innerHTML =
+    '<div style="font-size:12px;color:#6b7280;">Loading balances...</div>';
+
+  let existing = [];
+
+  if (employee && !currentUser?.demo) {
+
+    const { data, error } =
+      await supabaseClient
+        .from("leave_balances")
+        .select("leave_type_id, allocated_days, used_days")
+        .eq("employee_id", employee.id)
+        .eq("financial_year", fy);
+
+    if (error) {
+      console.error("Balance load error:", error);
+    } else {
+      existing = data || [];
+    }
+
+  }
+
+  box.innerHTML = activeTypes.map(function (type) {
+
+    const row = existing.find(b => b.leave_type_id === type.id);
+
+    const value = row ? row.allocated_days : (type.default_days ?? 0);
+
+    const used = getUsedDays(employee ? employee.id : null, type.id, fy);
+
+    return `
+      <div class="form-group">
+        <label>${escapeHtml(type.name)} (${escapeHtml(type.code || "")}) — allocated days</label>
+        <input
+          type="number"
+          step="0.5"
+          min="0"
+          class="employee-balance-input"
+          data-leave-type-id="${escapeHtml(type.id)}"
+          value="${escapeHtml(String(value))}"
+        >
+        <small style="color:#6b7280;">Used: ${used}${row && row.carried_forward ? " · Carried forward: " + row.carried_forward : ""}</small>
+      </div>
+    `;
+
+  }).join("");
+
+}
+
+
+async function openEmployeeModal(employeeId) {
+
+  editingEmployeeId = employeeId || null;
+
+  document.getElementById("employeeForm").reset();
+
+  const employee =
+    editingEmployeeId
+      ? employees.find(x => x.id === editingEmployeeId)
+      : null;
+
+  const set = (id, value) =>
+    document.getElementById(id).value = value ?? "";
+
+  document.getElementById("employeeModalTitle").textContent =
+    employee ? "Edit Employee" : "Add Employee";
+
+  document.getElementById("employeeEmail").readOnly = !!employee;
+
+  document.getElementById("employeeLoginHint").style.display =
+    employee ? "none" : "block";
+
+  fillManagerOptions(
+    editingEmployeeId,
+    employee ? employee.reporting_manager_id : null
+  );
+
+  if (employee) {
+
+    set("employeeCode", employee.employee_code);
+    set("employeeName", employee.full_name);
+    set("employeeEmail", employee.email);
+    set("employeePhone", employee.phone);
+    set("employeeDepartment", employee.department);
+    set("employeeDesignation", employee.designation);
+    set("employeeRole", employee.role || "employee");
+    set("employeeJoiningDate", employee.joining_date);
+    set("employeeLocation", employee.location);
+    set("employeeType", employee.employment_type || "Full-time");
+    set("employeeStatus", employee.status || "active");
+
+  } else {
+
+    set("employeeCode", nextEmployeeCode());
+    set("employeeType", "Full-time");
+    set("employeeStatus", "active");
+
+  }
 
   openModal("employeeModal");
+
+  await renderEmployeeBalanceFields(employee);
+
+}
+
+
+async function saveEmployeeBalances(employeeId) {
+
+  const fy = getFinancialYear();
+
+  const inputs =
+    document.querySelectorAll(".employee-balance-input");
+
+  for (const input of inputs) {
+
+    if (input.value === "") continue;
+
+    const leaveTypeId = input.dataset.leaveTypeId;
+
+    const allocated = Number(input.value);
+
+    if (Number.isNaN(allocated) || allocated < 0) {
+      return "Invalid leave balance value.";
+    }
+
+    const { data: existing, error: findError } =
+      await supabaseClient
+        .from("leave_balances")
+        .select("id, allocated_days")
+        .eq("employee_id", employeeId)
+        .eq("leave_type_id", leaveTypeId)
+        .eq("financial_year", fy)
+        .maybeSingle();
+
+    if (findError) return findError.message;
+
+    const previousAllocated = existing ? Number(existing.allocated_days || 0) : 0;
+
+    let result;
+
+    if (existing) {
+
+      result =
+        await supabaseClient
+          .from("leave_balances")
+          .update({ allocated_days: allocated })
+          .eq("id", existing.id);
+
+    } else {
+
+      result =
+        await supabaseClient
+          .from("leave_balances")
+          .insert({
+            employee_id: employeeId,
+            leave_type_id: leaveTypeId,
+            financial_year: fy,
+            allocated_days: allocated,
+            used_days: 0
+          });
+
+    }
+
+    if (result.error) return result.error.message;
+
+    if (previousAllocated !== allocated) {
+
+      const typeName =
+        (leaveTypes.find(t => t.id === leaveTypeId) || {}).name || "Leave";
+
+      await createAuditLog(
+        employeeId,
+        "UPDATE",
+        "Balance",
+        "Admin changed " + typeName + " balance (FY " + fy + ") for " +
+          getEmployeeName(employeeId) + ".",
+        String(previousAllocated),
+        String(allocated)
+      );
+
+    }
+
+  }
+
+  return null;
 
 }
 
@@ -3960,13 +5155,50 @@ async function submitEmployee(event) {
   event.preventDefault();
 
 
-  if (
-    currentEmployee?.role !== "admin"
-  ) {
+  if (currentEmployee?.role !== "admin") {
 
-    showToast(
-      "Administrator access required."
-    );
+    showToast("Administrator access required.");
+
+    return;
+
+  }
+
+
+  const isEdit = !!editingEmployeeId;
+
+  const beforeEmployee =
+    isEdit
+      ? { ...(employees.find(x => x.id === editingEmployeeId) || {}) }
+      : null;
+
+  const val = id => document.getElementById(id).value.trim();
+
+  const role = document.getElementById("employeeRole").value;
+
+  const status = document.getElementById("employeeStatus").value;
+
+  const managerId =
+    document.getElementById("employeeManager").value || null;
+
+
+  if (isEdit && editingEmployeeId === currentEmployee.id) {
+
+    if (role !== "admin") {
+      showToast("You cannot remove your own administrator role.");
+      return;
+    }
+
+    if (status === "resigned" || status === "inactive") {
+      showToast("You cannot deactivate your own account.");
+      return;
+    }
+
+  }
+
+
+  if (managerId && managerId === editingEmployeeId) {
+
+    showToast("An employee cannot be their own reporting manager.");
 
     return;
 
@@ -3975,69 +5207,126 @@ async function submitEmployee(event) {
 
   const employeeData = {
 
-    full_name:
-      document.getElementById("employeeName").value.trim(),
-
-    email:
-      document.getElementById("employeeEmail").value.trim(),
-
-    phone:
-      document.getElementById("employeePhone").value.trim(),
-
-    department:
-      document.getElementById("employeeDepartment").value.trim(),
-
-    designation:
-      document.getElementById("employeeDesignation").value.trim(),
-
-    role:
-      document.getElementById("employeeRole").value,
-
-    joining_date:
-      document.getElementById("employeeJoiningDate").value || null,
-
-    status: "active"
+    employee_code: val("employeeCode") || null,
+    full_name: val("employeeName"),
+    phone: val("employeePhone"),
+    department: val("employeeDepartment"),
+    designation: val("employeeDesignation"),
+    role: role,
+    joining_date: document.getElementById("employeeJoiningDate").value || null,
+    reporting_manager_id: managerId,
+    location: val("employeeLocation") || null,
+    employment_type: document.getElementById("employeeType").value,
+    status: status
 
   };
+
+  if (!isEdit) {
+    employeeData.email = val("employeeEmail");
+  }
 
 
   if (currentUser?.demo) {
 
-    employees.push({
-      ...employeeData,
-      id: "demo-employee-" + Date.now()
-    });
+    if (isEdit) {
+      Object.assign(
+        employees.find(x => x.id === editingEmployeeId),
+        employeeData
+      );
+    } else {
+      employees.push({
+        ...employeeData,
+        id: "demo-employee-" + Date.now()
+      });
+    }
 
     closeModal("employeeModal");
 
     renderEmployees();
 
-    showToast("Employee added in demo mode.");
+    showToast("Employee saved in demo mode.");
 
     return;
 
   }
 
 
-  const { error } =
-    await supabaseClient
-      .from("employees")
-      .insert(employeeData);
+  let savedId = editingEmployeeId;
+
+  if (isEdit) {
+
+    const { error } =
+      await supabaseClient
+        .from("employees")
+        .update(employeeData)
+        .eq("id", editingEmployeeId);
+
+    if (error) {
+
+      console.error(error);
+
+      showToast("Unable to update employee: " + error.message);
+
+      return;
+
+    }
+
+  } else {
+
+    const { data, error } =
+      await supabaseClient
+        .from("employees")
+        .insert(employeeData)
+        .select("id")
+        .single();
+
+    if (error) {
+
+      console.error(error);
+
+      showToast("Unable to add employee: " + error.message);
+
+      return;
+
+    }
+
+    savedId = data.id;
+
+  }
 
 
-  if (error) {
+  if (isEdit) {
 
-    console.error(error);
+    const changes = auditDiff(beforeEmployee, employeeData, [
+      { key: "full_name", label: "Name" },
+      { key: "department", label: "Department" },
+      { key: "designation", label: "Designation" },
+      { key: "role", label: "Role" },
+      { key: "status", label: "Status" },
+      { key: "employment_type", label: "Employment Type" },
+      { key: "location", label: "Location" },
+      { key: "reporting_manager_id", label: "Reporting Manager" }
+    ]);
 
-    showToast(
-      "Unable to add employee: " +
-      error.message
+    await logFieldChanges(
+      savedId,
+      "Employee",
+      "Admin updated " + employeeData.full_name + "'s profile.",
+      changes
     );
 
-    return;
+  } else {
+
+    await createAuditLog(
+      savedId,
+      "CREATE",
+      "Employee",
+      "Admin added new employee " + employeeData.full_name + "."
+    );
 
   }
 
+  const balanceError = await saveEmployeeBalances(savedId);
 
   closeModal("employeeModal");
 
@@ -4045,7 +5334,13 @@ async function submitEmployee(event) {
 
   renderEmployees();
 
-  showToast("Employee added successfully.");
+  showToast(
+    balanceError
+      ? "Employee saved, but balance update failed: " + balanceError
+      : (isEdit
+          ? "Employee updated successfully."
+          : "Employee added successfully.")
+  );
 
 }
 
@@ -4059,12 +5354,14 @@ function renderLeaveTypes() {
   const table =
     document.getElementById("leaveTypesTable");
 
+  const isAdmin = currentEmployee?.role === "admin";
+
 
   if (leaveTypes.length === 0) {
 
     table.innerHTML = `
       <tr>
-        <td colspan="5">
+        <td colspan="9">
           <div class="empty-state">
             <div class="empty-icon">🏷️</div>
             No leave types found.
@@ -4083,29 +5380,19 @@ function renderLeaveTypes() {
 
       return `
         <tr>
-
+          <td>${escapeHtml(type.name)}</td>
+          <td>${escapeHtml(type.code)}</td>
+          <td>${type.default_days}</td>
+          <td>${type.max_carry_forward ?? 0}</td>
+          <td>${type.max_consecutive_days ? type.max_consecutive_days : "No limit"}</td>
+          <td>${type.allow_negative ? "Allowed" : "Not allowed"}</td>
+          <td>${type.is_paid ? "Yes" : "No"}</td>
+          <td>${statusBadge(type.status || "active")}</td>
           <td>
-            ${escapeHtml(type.name)}
+            ${isAdmin
+              ? `<button class="btn btn-secondary btn-sm" onclick="openLeaveTypeModal('${escapeHtml(type.id)}')">Edit</button>`
+              : ""}
           </td>
-
-          <td>
-            ${escapeHtml(type.code)}
-          </td>
-
-          <td>
-            ${type.default_days}
-          </td>
-
-          <td>
-            ${type.is_paid ? "Yes" : "No"}
-          </td>
-
-          <td>
-            ${statusBadge(
-              type.status || "active"
-            )}
-          </td>
-
         </tr>
       `;
 
@@ -4118,11 +5405,38 @@ function renderLeaveTypes() {
    LEAVE TYPE MODAL
 ========================================================= */
 
-function openLeaveTypeModal() {
+let editingLeaveTypeId = null;
 
-  document
-    .getElementById("leaveTypeForm")
-    .reset();
+function openLeaveTypeModal(typeId) {
+
+  editingLeaveTypeId = typeId || null;
+
+  document.getElementById("leaveTypeForm").reset();
+
+  const type =
+    editingLeaveTypeId
+      ? leaveTypes.find(x => x.id === editingLeaveTypeId)
+      : null;
+
+  const set = (id, value) =>
+    document.getElementById(id).value = value ?? "";
+
+  document.getElementById("leaveTypeModalTitle").textContent =
+    type ? "Edit Leave Type" : "Add Leave Type";
+
+  if (type) {
+
+    set("leaveTypeName", type.name);
+    set("leaveTypeCode", type.code);
+    set("leaveTypeDays", type.default_days);
+    set("leaveTypePaid", String(type.is_paid !== false));
+    set("leaveTypeCarry", type.max_carry_forward ?? 0);
+    set("leaveTypeMaxConsecutive", type.max_consecutive_days);
+    set("leaveTypeNegative", String(!!type.allow_negative));
+    set("leaveTypeStatus", type.status || "active");
+    set("leaveTypeDescription", type.description);
+
+  }
 
   openModal("leaveTypeModal");
 
@@ -4134,18 +5448,17 @@ async function submitLeaveType(event) {
   event.preventDefault();
 
 
-  if (
-    currentEmployee?.role !== "admin"
-  ) {
+  if (currentEmployee?.role !== "admin") {
 
-    showToast(
-      "Administrator access required."
-    );
+    showToast("Administrator access required.");
 
     return;
 
   }
 
+
+  const maxConsecutiveRaw =
+    document.getElementById("leaveTypeMaxConsecutive").value;
 
   const data = {
 
@@ -4153,37 +5466,53 @@ async function submitLeaveType(event) {
       document.getElementById("leaveTypeName").value.trim(),
 
     code:
-      document
-        .getElementById("leaveTypeCode")
-        .value
-        .trim()
-        .toUpperCase(),
+      document.getElementById("leaveTypeCode").value.trim().toUpperCase(),
 
     default_days:
-      Number(
-        document.getElementById("leaveTypeDays").value
-      ),
+      Number(document.getElementById("leaveTypeDays").value),
 
     is_paid:
       document.getElementById("leaveTypePaid").value === "true",
 
-    description:
-      document
-        .getElementById("leaveTypeDescription")
-        .value
-        .trim(),
+    max_carry_forward:
+      Number(document.getElementById("leaveTypeCarry").value || 0),
 
-    status: "active"
+    max_consecutive_days:
+      maxConsecutiveRaw === "" ? null : Number(maxConsecutiveRaw),
+
+    allow_negative:
+      document.getElementById("leaveTypeNegative").value === "true",
+
+    description:
+      document.getElementById("leaveTypeDescription").value.trim(),
+
+    status:
+      document.getElementById("leaveTypeStatus").value
 
   };
 
 
+  const isEdit = !!editingLeaveTypeId;
+
+  const beforeType =
+    isEdit
+      ? { ...(leaveTypes.find(x => x.id === editingLeaveTypeId) || {}) }
+      : null;
+
+
   if (currentUser?.demo) {
 
-    leaveTypes.push({
-      ...data,
-      id: "demo-type-" + Date.now()
-    });
+    if (isEdit) {
+      Object.assign(
+        leaveTypes.find(x => x.id === editingLeaveTypeId),
+        data
+      );
+    } else {
+      leaveTypes.push({
+        ...data,
+        id: "demo-type-" + Date.now()
+      });
+    }
 
     closeModal("leaveTypeModal");
 
@@ -4191,7 +5520,7 @@ async function submitLeaveType(event) {
 
     renderLeaveTypes();
 
-    showToast("Leave type added in demo mode.");
+    showToast("Leave type saved in demo mode.");
 
     return;
 
@@ -4199,24 +5528,55 @@ async function submitLeaveType(event) {
 
 
   const { error } =
-    await supabaseClient
-      .from("leave_types")
-      .insert(data);
+    isEdit
+      ? await supabaseClient
+          .from("leave_types")
+          .update(data)
+          .eq("id", editingLeaveTypeId)
+      : await supabaseClient
+          .from("leave_types")
+          .insert(data);
 
 
   if (error) {
 
     console.error(error);
 
-    showToast(
-      "Unable to add leave type: " +
-      error.message
-    );
+    showToast("Unable to save leave type: " + error.message);
 
     return;
 
   }
 
+
+  if (isEdit) {
+
+    const changes = auditDiff(beforeType, data, [
+      { key: "default_days", label: "Annual Days" },
+      { key: "max_carry_forward", label: "Max Carry Forward" },
+      { key: "max_consecutive_days", label: "Max Consecutive Days" },
+      { key: "allow_negative", label: "Allow Negative Balance" },
+      { key: "is_paid", label: "Paid" },
+      { key: "status", label: "Status" }
+    ]);
+
+    await logFieldChanges(
+      currentEmployee.id,
+      "LeaveType",
+      "Admin updated leave type " + data.name + ".",
+      changes
+    );
+
+  } else {
+
+    await createAuditLog(
+      currentEmployee.id,
+      "CREATE",
+      "LeaveType",
+      "Admin added leave type " + data.name + "."
+    );
+
+  }
 
   closeModal("leaveTypeModal");
 
@@ -4226,7 +5586,11 @@ async function submitLeaveType(event) {
 
   renderLeaveTypes();
 
-  showToast("Leave type added successfully.");
+  showToast(
+    isEdit
+      ? "Leave type updated successfully."
+      : "Leave type added successfully."
+  );
 
 }
 
@@ -4235,20 +5599,178 @@ async function submitLeaveType(event) {
    HOLIDAYS
 ========================================================= */
 
+const HOLIDAY_TYPE_LABELS = {
+  national: "National",
+  festival: "Festival",
+  company: "Company",
+  optional: "Optional",
+  restricted: "Restricted"
+};
+
+function normalizeLocation(value) {
+
+  return String(value || "").trim().toLowerCase();
+
+}
+
+function holidayAppliesTo(holiday, location) {
+
+  const holidayLocation = normalizeLocation(holiday.location);
+
+  return (
+    holidayLocation === "" ||
+    holidayLocation === normalizeLocation(location)
+  );
+
+}
+
+function isNonWorkingHoliday(holiday) {
+
+  const type = holiday.holiday_type || "national";
+
+  return type !== "optional" && type !== "restricted";
+
+}
+
+function getViewerLocation() {
+
+  const me =
+    currentEmployee
+      ? (getEmployeeById(currentEmployee.id) || currentEmployee)
+      : null;
+
+  return (me && me.location) || "";
+
+}
+
+function isoDate(date) {
+
+  return (
+    date.getFullYear() + "-" +
+    String(date.getMonth() + 1).padStart(2, "0") + "-" +
+    String(date.getDate()).padStart(2, "0")
+  );
+
+}
+
+function getKnownLocations(includeDefaults) {
+
+  const found = new Map();
+
+  if (includeDefaults) {
+    ["Delhi Office", "Mumbai Office", "Bangalore Office"]
+      .forEach(l => found.set(normalizeLocation(l), l));
+  }
+
+  employees.concat(holidays).forEach(function (item) {
+
+    const loc = String(item.location || "").trim();
+
+    if (loc && !found.has(normalizeLocation(loc))) {
+      found.set(normalizeLocation(loc), loc);
+    }
+
+  });
+
+  return Array.from(found.values()).sort();
+
+}
+
+function holidayTypeBadge(type) {
+
+  const safe = type || "national";
+
+  return `<span class="badge badge-h-${escapeHtml(safe)}">${escapeHtml(HOLIDAY_TYPE_LABELS[safe] || safe)}</span>`;
+
+}
+
 function renderHolidays() {
 
-  const table =
-    document.getElementById("holidaysTable");
+  const table = document.getElementById("holidaysTable");
+
+  const isAdmin = currentEmployee?.role === "admin";
+
+  const yearSelect = document.getElementById("holidayYearFilter");
+
+  const locationSelect = document.getElementById("holidayLocationFilter");
+
+  document.getElementById("addHolidayBtn").style.display =
+    isAdmin ? "inline-block" : "none";
 
 
-  if (holidays.length === 0) {
+  const previousYear = yearSelect.value;
+
+  const previousLocation = locationSelect.value;
+
+  const thisYear = String(new Date().getFullYear());
+
+  const years = new Set([thisYear]);
+
+  holidays.forEach(function (h) {
+    if (h.holiday_date) years.add(h.holiday_date.slice(0, 4));
+  });
+
+  yearSelect.innerHTML =
+    '<option value="all">All years</option>' +
+    Array.from(years).sort().map(y =>
+      `<option value="${y}">${y}</option>`
+    ).join("");
+
+  yearSelect.value = previousYear || thisYear;
+
+  if (!yearSelect.value) yearSelect.value = thisYear;
+
+
+  locationSelect.style.display = isAdmin ? "inline-block" : "none";
+
+  locationSelect.innerHTML =
+    '<option value="">All holidays</option>' +
+    getKnownLocations(false).map(l =>
+      `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`
+    ).join("");
+
+  locationSelect.value = previousLocation || "";
+
+
+  const year = yearSelect.value;
+
+  const filterLocation = locationSelect.value;
+
+  const myLocation = getViewerLocation();
+
+
+  const list =
+    holidays
+      .filter(function (h) {
+
+        if (year !== "all" && !(h.holiday_date || "").startsWith(year)) {
+          return false;
+        }
+
+        if (isAdmin) {
+          return !filterLocation || holidayAppliesTo(h, filterLocation);
+        }
+
+        return holidayAppliesTo(h, myLocation);
+
+      })
+      .sort((x, y) => (x.holiday_date > y.holiday_date ? 1 : -1));
+
+
+  document.getElementById("holidayFootnote").textContent =
+    isAdmin
+      ? "National, Festival and Company holidays are non-working days and are not counted as leave. Optional and Restricted holidays are working days unless leave is taken."
+      : "Showing holidays for: " + (myLocation || "all offices") + ". Optional and Restricted holidays are working days unless you take leave.";
+
+
+  if (list.length === 0) {
 
     table.innerHTML = `
       <tr>
-        <td colspan="3">
+        <td colspan="7">
           <div class="empty-state">
             <div class="empty-icon">🎉</div>
-            No holidays added.
+            No holidays found.
           </div>
         </td>
       </tr>
@@ -4259,34 +5781,30 @@ function renderHolidays() {
   }
 
 
-  table.innerHTML =
-    holidays.map(function (holiday) {
+  table.innerHTML = list.map(function (holiday) {
 
-      return `
-        <tr>
+    const weekday =
+      new Date(holiday.holiday_date + "T00:00:00")
+        .toLocaleDateString("en-IN", { weekday: "long" });
 
-          <td>
-            ${escapeHtml(
-              holiday.holiday_name
-            )}
-          </td>
+    return `
+      <tr>
+        <td>${escapeHtml(holiday.holiday_name)}</td>
+        <td>${formatDate(holiday.holiday_date)}</td>
+        <td>${escapeHtml(weekday)}</td>
+        <td>${holidayTypeBadge(holiday.holiday_type)}</td>
+        <td>${escapeHtml(holiday.location || "All offices")}</td>
+        <td>${escapeHtml(holiday.description || "-")}</td>
+        <td>
+          ${isAdmin
+            ? `<button class="btn btn-secondary btn-sm" onclick="openHolidayModal('${escapeHtml(holiday.id)}')">Edit</button>
+               <button class="btn btn-danger btn-sm" onclick="deleteHoliday('${escapeHtml(holiday.id)}')">Delete</button>`
+            : ""}
+        </td>
+      </tr>
+    `;
 
-          <td>
-            ${formatDate(
-              holiday.holiday_date
-            )}
-          </td>
-
-          <td>
-            ${escapeHtml(
-              holiday.description || "-"
-            )}
-          </td>
-
-        </tr>
-      `;
-
-    }).join("");
+  }).join("");
 
 }
 
@@ -4295,11 +5813,39 @@ function renderHolidays() {
    HOLIDAY MODAL
 ========================================================= */
 
-function openHolidayModal() {
+let editingHolidayId = null;
 
-  document
-    .getElementById("holidayForm")
-    .reset();
+function openHolidayModal(holidayId) {
+
+  editingHolidayId = holidayId || null;
+
+  document.getElementById("holidayForm").reset();
+
+  const holiday =
+    editingHolidayId
+      ? holidays.find(x => x.id === editingHolidayId)
+      : null;
+
+  const set = (id, value) =>
+    document.getElementById(id).value = value ?? "";
+
+  document.getElementById("holidayModalTitle").textContent =
+    holiday ? "Edit Holiday" : "Add Holiday";
+
+  document.getElementById("holidayLocationOptions").innerHTML =
+    getKnownLocations(true).map(l =>
+      `<option value="${escapeHtml(l)}"></option>`
+    ).join("");
+
+  if (holiday) {
+
+    set("holidayName", holiday.holiday_name);
+    set("holidayDate", holiday.holiday_date);
+    set("holidayType", holiday.holiday_type || "national");
+    set("holidayLocation", holiday.location);
+    set("holidayDescription", holiday.description);
+
+  }
 
   openModal("holidayModal");
 
@@ -4311,13 +5857,9 @@ async function submitHoliday(event) {
   event.preventDefault();
 
 
-  if (
-    currentEmployee?.role !== "admin"
-  ) {
+  if (currentEmployee?.role !== "admin") {
 
-    showToast(
-      "Administrator access required."
-    );
+    showToast("Administrator access required.");
 
     return;
 
@@ -4332,27 +5874,38 @@ async function submitHoliday(event) {
     holiday_date:
       document.getElementById("holidayDate").value,
 
+    holiday_type:
+      document.getElementById("holidayType").value,
+
+    location:
+      document.getElementById("holidayLocation").value.trim() || null,
+
     description:
-      document
-        .getElementById("holidayDescription")
-        .value
-        .trim()
+      document.getElementById("holidayDescription").value.trim()
 
   };
+
+  const isEdit = !!editingHolidayId;
+
+  const beforeHoliday =
+    isEdit
+      ? { ...(holidays.find(x => x.id === editingHolidayId) || {}) }
+      : null;
 
 
   if (currentUser?.demo) {
 
-    holidays.push({
-      ...data,
-      id: "demo-holiday-" + Date.now()
-    });
+    if (isEdit) {
+      Object.assign(holidays.find(x => x.id === editingHolidayId), data);
+    } else {
+      holidays.push({ ...data, id: "demo-holiday-" + Date.now() });
+    }
 
     closeModal("holidayModal");
 
     renderHolidays();
 
-    showToast("Holiday added in demo mode.");
+    showToast("Holiday saved in demo mode.");
 
     return;
 
@@ -4360,24 +5913,54 @@ async function submitHoliday(event) {
 
 
   const { error } =
-    await supabaseClient
-      .from("holidays")
-      .insert(data);
+    isEdit
+      ? await supabaseClient
+          .from("holidays")
+          .update(data)
+          .eq("id", editingHolidayId)
+      : await supabaseClient
+          .from("holidays")
+          .insert(data);
 
 
   if (error) {
 
     console.error(error);
 
-    showToast(
-      "Unable to add holiday: " +
-      error.message
-    );
+    showToast("Unable to save holiday: " + error.message);
 
     return;
 
   }
 
+
+  if (isEdit) {
+
+    const changes = auditDiff(beforeHoliday, data, [
+      { key: "holiday_name", label: "Name" },
+      { key: "holiday_date", label: "Date" },
+      { key: "holiday_type", label: "Type" },
+      { key: "location", label: "Location" }
+    ]);
+
+    await logFieldChanges(
+      currentEmployee.id,
+      "Holiday",
+      "Admin updated holiday " + data.holiday_name + ".",
+      changes
+    );
+
+  } else {
+
+    await createAuditLog(
+      currentEmployee.id,
+      "CREATE",
+      "Holiday",
+      "Admin added holiday " + data.holiday_name +
+        " on " + data.holiday_date + "."
+    );
+
+  }
 
   closeModal("holidayModal");
 
@@ -4385,7 +5968,74 @@ async function submitHoliday(event) {
 
   renderHolidays();
 
-  showToast("Holiday added successfully.");
+  showToast(
+    isEdit
+      ? "Holiday updated successfully."
+      : "Holiday added successfully."
+  );
+
+}
+
+
+async function deleteHoliday(id) {
+
+  if (currentEmployee?.role !== "admin") {
+
+    showToast("Administrator access required.");
+
+    return;
+
+  }
+
+  const holiday = holidays.find(x => x.id === id);
+
+  if (
+    !confirm(
+      "Delete holiday \"" + (holiday ? holiday.holiday_name : "") + "\"?"
+    )
+  ) {
+    return;
+  }
+
+  if (currentUser?.demo) {
+
+    holidays = holidays.filter(x => x.id !== id);
+
+    renderHolidays();
+
+    return;
+
+  }
+
+  const { error } =
+    await supabaseClient
+      .from("holidays")
+      .delete()
+      .eq("id", id);
+
+  if (error) {
+
+    console.error(error);
+
+    showToast("Unable to delete holiday: " + error.message);
+
+    return;
+
+  }
+
+  await createAuditLog(
+    currentEmployee.id,
+    "DELETE",
+    "Holiday",
+    "Admin deleted holiday " +
+      (holiday ? holiday.holiday_name : "") + "."
+  );
+
+  await loadHolidays();
+
+  renderHolidays();
+
+  showToast("Holiday deleted.");
 
 }
 
@@ -4553,37 +6203,22 @@ function renderDashboardLeaves(data) {
 function renderDashboardBalances() {
 
   const container =
-    document.getElementById(
-      "dashboardBalances"
-    );
+    document.getElementById("dashboardBalances");
+
+  const rowStyle =
+    "display:flex;justify-content:space-between;" +
+    "padding:12px 0;border-bottom:1px solid #eee;";
 
 
-  if (
-    currentUser?.demo ||
-    leaveBalances.length === 0
-  ) {
+  if (currentUser?.demo) {
 
     container.innerHTML =
       leaveTypes.map(function (type) {
 
         return `
-          <div
-            style="
-              display:flex;
-              justify-content:space-between;
-              padding:12px 0;
-              border-bottom:1px solid #eee;
-            "
-          >
-
-            <span>
-              ${escapeHtml(type.name)}
-            </span>
-
-            <strong>
-              ${type.default_days} days
-            </strong>
-
+          <div style="${rowStyle}">
+            <span>${escapeHtml(type.name)}</span>
+            <strong>${type.default_days} days</strong>
           </div>
         `;
 
@@ -4594,35 +6229,73 @@ function renderDashboardBalances() {
   }
 
 
+  const fy = getFinancialYear();
+
+  const activeTypes =
+    leaveTypes.filter(t => (t.status || "active") === "active");
+
+
   container.innerHTML =
-    leaveBalances.map(function (balance) {
+    activeTypes.map(function (type) {
 
-      const remaining =
-        Number(balance.allocated_days || 0) -
-        Number(balance.used_days || 0);
+      if (type.is_paid === false) {
 
+        return `
+          <div style="${rowStyle}">
+            <span>${escapeHtml(type.name)}</span>
+            <span style="color:#9ca3af;">Unpaid · no limit</span>
+          </div>
+        `;
+
+      }
+
+      const row =
+        leaveBalances.find(function (b) {
+          return (
+            b.leave_type_id === type.id &&
+            b.financial_year === fy
+          );
+        });
+
+      if (!row) {
+
+        return `
+          <div style="${rowStyle}">
+            <span>${escapeHtml(type.name)}</span>
+            <span style="color:#9ca3af;">Not allocated</span>
+          </div>
+        `;
+
+      }
+
+      const carried = Number(row.carried_forward || 0);
+
+      const entitlement =
+        Number(row.allocated_days || 0) + carried;
+
+      const used =
+        getUsedDays(currentEmployee.id, type.id, fy);
+
+      const pending =
+        getPendingDays(currentEmployee.id, type.id, fy);
+
+      const remaining = entitlement - used;
+
+      const color = remaining < 0 ? "#dc2626" : "inherit";
+
+      const sub =
+        "Used " + used +
+        (pending ? " · Pending " + pending : "") +
+        " of " + entitlement +
+        (carried ? " (incl. " + carried + " carried)" : "");
 
       return `
-        <div
-          style="
-            display:flex;
-            justify-content:space-between;
-            padding:12px 0;
-            border-bottom:1px solid #eee;
-          "
-        >
-
+        <div style="${rowStyle}">
           <span>
-            ${escapeHtml(
-              balance.leave_types?.name ||
-              "-"
-            )}
+            ${escapeHtml(type.name)}
+            <small style="color:#9ca3af;display:block;">${sub}</small>
           </span>
-
-          <strong>
-            ${remaining} days
-          </strong>
-
+          <strong style="color:${color};">${remaining} days</strong>
         </div>
       `;
 
@@ -4752,10 +6425,18 @@ function renderCalendar() {
       String(day).padStart(2, "0");
 
 
-    const holiday =
-      holidays.find(
-        x => x.holiday_date === date
-      );
+    const dayHolidays =
+      holidays.filter(function (x) {
+
+        return (
+          x.holiday_date === date &&
+          (
+            currentEmployee?.role === "admin" ||
+            holidayAppliesTo(x, getViewerLocation())
+          )
+        );
+
+      });
 
 
     const dayLeaves =
@@ -4779,17 +6460,24 @@ function renderCalendar() {
     `;
 
 
-    if (holiday) {
+    dayHolidays.forEach(function (holiday) {
+
+      const tag =
+        (holiday.holiday_type === "optional" ? " (Optional)" : "") +
+        (holiday.holiday_type === "restricted" ? " (Restricted)" : "") +
+        (
+          currentEmployee?.role === "admin" && holiday.location
+            ? " · " + holiday.location
+            : ""
+        );
 
       html += `
         <div class="calendar-event calendar-holiday">
-          🎉 ${escapeHtml(
-            holiday.holiday_name
-          )}
+          🎉 ${escapeHtml(holiday.holiday_name + tag)}
         </div>
       `;
 
-    }
+    });
 
 
     dayLeaves.forEach(function (leave) {
@@ -5231,6 +6919,10 @@ async function createNotification(
       error
     );
 
+    showToast(
+      "Notification could not be saved: " + error.message
+    );
+
   }
 
 }
@@ -5244,7 +6936,9 @@ async function createAuditLog(
   employeeId,
   action,
   module,
-  description
+  description,
+  oldValue,
+  newValue
 ) {
 
   if (currentUser?.demo) {
@@ -5263,7 +6957,13 @@ async function createAuditLog(
 
         module: module,
 
-        description: description
+        description: description,
+
+        old_value: oldValue ?? null,
+
+        new_value: newValue ?? null,
+
+        ip_address: clientIp
 
       });
 
@@ -5280,9 +6980,179 @@ async function createAuditLog(
 }
 
 
+function auditDiff(before, after, fields) {
+
+  const changes = [];
+
+  fields.forEach(function (f) {
+
+    const oldVal = before ? (before[f.key] ?? "") : "";
+
+    const newVal = after[f.key] ?? "";
+
+    if (String(oldVal) !== String(newVal)) {
+
+      changes.push({
+        label: f.label,
+        oldVal: oldVal === "" ? "-" : String(oldVal),
+        newVal: newVal === "" ? "-" : String(newVal)
+      });
+
+    }
+
+  });
+
+  return changes;
+
+}
+
+
+async function logFieldChanges(employeeId, module, description, changes) {
+
+  for (const c of changes) {
+
+    await createAuditLog(
+      employeeId,
+      "UPDATE",
+      module,
+      description + " — " + c.label,
+      c.oldVal,
+      c.newVal
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   AUDIT LOG PAGE
+========================================================= */
+
+let auditLogs = [];
+
+async function loadAuditLogs() {
+
+  if (currentUser?.demo || currentEmployee?.role !== "admin") {
+    auditLogs = [];
+    return;
+  }
+
+  const { data, error } =
+    await supabaseClient
+      .from("audit_logs")
+      .select(`
+        *,
+        employees:employee_id ( full_name )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+  if (error) {
+
+    console.error("Audit load error:", error);
+
+    auditLogs = [];
+
+    return;
+
+  }
+
+  auditLogs = data || [];
+
+}
+
+function renderAuditLog() {
+
+  const table = document.getElementById("auditLogTable");
+
+  if (!table) return;
+
+  const moduleFilter = document.getElementById("auditModuleFilter").value;
+
+  const fromDate = document.getElementById("auditFromDate").value;
+
+  const toDate = document.getElementById("auditToDate").value;
+
+  const search =
+    document.getElementById("auditSearch").value.trim().toLowerCase();
+
+  const list = auditLogs.filter(function (log) {
+
+    if (moduleFilter && log.module !== moduleFilter) return false;
+
+    const day = (log.created_at || "").slice(0, 10);
+
+    if (fromDate && day < fromDate) return false;
+
+    if (toDate && day > toDate) return false;
+
+    if (search) {
+
+      const haystack = (
+        (log.employees?.full_name || "") + " " +
+        (log.description || "") + " " +
+        (log.action || "")
+      ).toLowerCase();
+
+      if (!haystack.includes(search)) return false;
+
+    }
+
+    return true;
+
+  });
+
+  if (list.length === 0) {
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="7">
+          <div class="empty-state">
+            <div class="empty-icon">📜</div>
+            No audit log entries found.
+          </div>
+        </td>
+      </tr>
+    `;
+
+    return;
+
+  }
+
+  table.innerHTML = list.map(function (log) {
+
+    const change =
+      (log.old_value !== null && log.old_value !== undefined) ||
+      (log.new_value !== null && log.new_value !== undefined)
+        ? escapeHtml(String(log.old_value ?? "-")) +
+          " → " +
+          escapeHtml(String(log.new_value ?? "-"))
+        : "-";
+
+    return `
+      <tr>
+        <td>${formatDateTime(log.created_at)}</td>
+        <td>${escapeHtml(log.employees?.full_name || "System")}</td>
+        <td>${escapeHtml(log.action || "-")}</td>
+        <td>${escapeHtml(log.module || "-")}</td>
+        <td>${escapeHtml(log.description || "-")}</td>
+        <td>${change}</td>
+        <td>${escapeHtml(log.ip_address || "-")}</td>
+      </tr>
+    `;
+
+  }).join("");
+
+}
+
+
+
 /* =========================================================
    SETTINGS
 ========================================================= */
+
+let lastLoadedSettings = null;
 
 async function loadSettings() {
 
@@ -5313,6 +7183,26 @@ async function loadSettings() {
 
   const settings = data || {};
 
+  lastLoadedSettings = {
+
+    company_name: settings.company_name || "My Company",
+
+    working_days:
+      settings.working_days ||
+      "Monday,Tuesday,Wednesday,Thursday,Friday",
+
+    fy_start: settings.fy_start || "04",
+
+    carry_forward: settings.carry_forward || "yes",
+
+    max_simultaneous_leave:
+      settings.max_simultaneous_leave ?? 2
+
+  };
+
+  maxSimultaneousLeave =
+    Number(lastLoadedSettings.max_simultaneous_leave);
+
 
   document.getElementById(
     "companyName"
@@ -5341,6 +7231,12 @@ async function loadSettings() {
     settings.carry_forward ||
     "yes";
 
+
+  document.getElementById(
+    "maxSimultaneousLeave"
+  ).value =
+    settings.max_simultaneous_leave ?? 2;
+
 }
 
 
@@ -5360,6 +7256,16 @@ async function saveSettings(event) {
     return;
 
   }
+
+
+  const beforeSettings =
+    lastLoadedSettings || {
+      company_name: "",
+      working_days: "",
+      fy_start: "",
+      carry_forward: "",
+      max_simultaneous_leave: ""
+    };
 
 
   const settings = {
@@ -5385,6 +7291,13 @@ async function saveSettings(event) {
       document.getElementById(
         "carryForward"
       ).value,
+
+    max_simultaneous_leave:
+      Number(
+        document.getElementById(
+          "maxSimultaneousLeave"
+        ).value || 2
+      ),
 
     updated_at:
       new Date().toISOString()
@@ -5415,6 +7328,25 @@ async function saveSettings(event) {
   }
 
 
+  const changes = auditDiff(beforeSettings, settings, [
+    { key: "company_name", label: "Company Name" },
+    { key: "working_days", label: "Working Days" },
+    { key: "fy_start", label: "Financial Year Start" },
+    { key: "carry_forward", label: "Carry Forward Allowed" },
+    { key: "max_simultaneous_leave", label: "Max Simultaneous Leave" }
+  ]);
+
+  maxSimultaneousLeave = settings.max_simultaneous_leave;
+
+  lastLoadedSettings = { ...settings };
+
+  await logFieldChanges(
+    currentEmployee.id,
+    "Settings",
+    "Admin updated company settings.",
+    changes
+  );
+
   showToast(
     "Settings saved successfully."
   );
@@ -5425,6 +7357,153 @@ async function saveSettings(event) {
 /* =========================================================
    FINANCIAL YEAR
 ========================================================= */
+
+function getFinancialYearFor(dateString) {
+
+  const parts = String(dateString || "").split("-");
+
+  const year = parseInt(parts[0], 10);
+
+  const month = parseInt(parts[1], 10);
+
+  if (!year || !month) {
+    return getFinancialYear();
+  }
+
+  if (month >= 4) {
+    return year + "-" + (year + 1);
+  }
+
+  return (year - 1) + "-" + year;
+
+}
+
+/* Used days = sum of APPROVED leaves in that financial year.
+   Calculated live, so it can never go out of sync. */
+
+function getUsedDays(employeeId, leaveTypeId, fy) {
+
+  if (!employeeId) return 0;
+
+  return leaves
+    .filter(function (l) {
+
+      return (
+        l.employee_id === employeeId &&
+        l.leave_type_id === leaveTypeId &&
+        l.status === "approved" &&
+        getFinancialYearFor(l.from_date) === fy
+      );
+
+    })
+    .reduce(function (sum, l) {
+      return sum + Number(l.total_days || 0);
+    }, 0);
+
+}
+
+
+function getPendingDays(employeeId, leaveTypeId, fy) {
+
+  if (!employeeId) return 0;
+
+  return leaves
+    .filter(function (l) {
+
+      return (
+        l.employee_id === employeeId &&
+        l.leave_type_id === leaveTypeId &&
+        l.status === "pending" &&
+        getFinancialYearFor(l.from_date) === fy
+      );
+
+    })
+    .reduce(function (sum, l) {
+      return sum + Number(l.total_days || 0);
+    }, 0);
+
+}
+
+/* =========================================================
+   LEAVE POLICY CHECK (runs before a leave is submitted)
+========================================================= */
+
+function checkLeavePolicy(leaveTypeId, fromDate, totalDays) {
+
+  const type = leaveTypes.find(t => t.id === leaveTypeId);
+
+  if (!type) {
+    return { error: "Invalid leave type." };
+  }
+
+  /* 1. Maximum consecutive days per request */
+
+  const maxC = Number(type.max_consecutive_days || 0);
+
+  if (maxC > 0 && totalDays > maxC) {
+
+    return {
+      error:
+        type.name + ": maximum " + maxC +
+        " consecutive day(s) allowed per request."
+    };
+
+  }
+
+  /* 2. Unpaid leave has no balance limit */
+
+  if (type.is_paid === false) {
+    return { finalBalance: null, typeName: type.name };
+  }
+
+  /* 3. Balance check */
+
+  const fy = getFinancialYearFor(fromDate);
+
+  const row =
+    leaveBalances.find(function (b) {
+      return (
+        b.leave_type_id === type.id &&
+        b.financial_year === fy
+      );
+    });
+
+  const entitlement =
+    row
+      ? Number(row.allocated_days || 0) +
+        Number(row.carried_forward || 0)
+      : 0;
+
+  const used =
+    getUsedDays(currentEmployee.id, type.id, fy);
+
+  const pending =
+    getPendingDays(currentEmployee.id, type.id, fy);
+
+  const available = entitlement - used - pending;
+
+  const finalBalance = available - totalDays;
+
+  if (finalBalance >= 0) {
+    return { finalBalance: finalBalance, typeName: type.name };
+  }
+
+  if (!type.allow_negative) {
+
+    return {
+      error: row
+        ? "Insufficient " + type.name + " balance. Available: " +
+          available + " day(s), requested: " + totalDays + "."
+        : type.name + " balance is not allocated for FY " + fy +
+          ". Please contact HR."
+    };
+
+  }
+
+  return { finalBalance: finalBalance, typeName: type.name };
+
+}
+
 
 function getFinancialYear() {
 
@@ -5512,18 +7591,33 @@ document
 
 function setupMobileMenu() {
 
+  const sidebar = document.getElementById("sidebar");
+
+  const backdrop = document.getElementById("sidebarBackdrop");
+
   document
     .getElementById("mobileMenuBtn")
     .addEventListener(
       "click",
       function () {
 
-        document
-          .getElementById("sidebar")
-          .classList.toggle("open");
+        sidebar.classList.toggle("open");
+
+        backdrop.classList.toggle(
+          "show",
+          sidebar.classList.contains("open")
+        );
 
       }
     );
+
+  backdrop.addEventListener("click", function () {
+
+    sidebar.classList.remove("open");
+
+    backdrop.classList.remove("show");
+
+  });
 
 }
 
