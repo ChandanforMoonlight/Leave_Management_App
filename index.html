@@ -1428,6 +1428,7 @@
                   <option value="all">All decisions</option><option value="approved">Fully approved</option>
                   <option value="partial">Partially approved</option><option value="rejected">Rejected</option>
                 </select>
+                <button type="button" class="btn btn-primary" onclick="exportApprovalHistory()">Export CSV</button>
               </div>
             </div>
             <p style="padding:0 20px;color:#6b7280">Admin: all decisions. Manager: your team's requests and decisions made by you.</p>
@@ -7938,13 +7939,10 @@ function canViewLeaveDecision(leave) {
   if(me.role!=='manager') return false;
   return leave.approved_by===me.id || getEmployeeById(leave.employee_id)?.reporting_manager_id===me.id;
 }
-function renderApprovalHistory() {
-  const table=document.getElementById('approvalHistoryTable');
-  if(!table) return;
-  if(!['admin','manager'].includes(currentEmployee?.role)) {table.innerHTML='';return;}
+function getFilteredApprovalHistory() {
   const search=(document.getElementById('approvalHistorySearch')?.value||'').trim().toLowerCase();
   const status=document.getElementById('approvalHistoryStatus')?.value||'all';
-  const data=leaves.filter(canViewLeaveDecision).filter(leave=>{
+  return leaves.filter(canViewLeaveDecision).filter(leave=>{
     const partial=leave.status==='approved' && !!leave.rejected_dates?.length;
     if(status==='partial' && !partial) return false;
     if(status==='approved' && (leave.status!=='approved'||partial))return false;
@@ -7952,6 +7950,47 @@ function renderApprovalHistory() {
     const employee=leave.employees||getEmployeeById(leave.employee_id);
     return [employee?.full_name,leave.reason,leave.rejection_reason,leave.alternate_number].join(' ').toLowerCase().includes(search);
   }).sort((a,b)=>String(b.approved_at||b.created_at||'').localeCompare(String(a.approved_at||a.created_at||'')));
+}
+
+
+function approvalHistoryCsvCell(value) {
+  let text=String(value ?? '');
+  // Treat formula-looking user text as text when opening in Excel.
+  if (/^[\s]*[=+\-@]/.test(text)) text="'"+text;
+  return '"'+text.replace(/"/g,'""')+'"';
+}
+function exportApprovalHistory() {
+  if(!['admin','manager'].includes(currentEmployee?.role)) return;
+  const data=getFilteredApprovalHistory();
+  if(!data.length){showToast('No history matches your filters.');return;}
+  const rows=[['Employee','Leave Type','From Date','To Date','Requested Days','Status','Approved Dates','Rejected Dates','Rejection Reason','Alternate Number','Decision By','Decision Time']];
+  for(const leave of data){
+    const employee=leave.employees||getEmployeeById(leave.employee_id);
+    const period=formatDate(leave.from_date)+' - '+formatDate(leave.to_date);
+    rows.push([
+      employee?.full_name||'Unknown employee',leave.leave_types?.name||getLeaveTypeName(leave.leave_type_id),
+      formatDate(leave.from_date),formatDate(leave.to_date),Number(leave.requested_total_days??leave.total_days),
+      leave.status==='approved'&&leave.rejected_dates?.length?'Partially approved':capitalize(leave.status),
+      leave.approved_dates?.length?leave.approved_dates.map(formatDate).join(', '):leave.status==='approved'?'Full request: '+period:'',
+      leave.rejected_dates?.length?leave.rejected_dates.map(formatDate).join(', '):leave.status==='rejected'?'Full request: '+period:'',
+      leave.rejection_reason||'',leave.alternate_number?"'"+leave.alternate_number:'',
+      leave.approved_by?getEmployeeName(leave.approved_by):'Not recorded',
+      leave.approved_at?formatDateTime(leave.approved_at):'Not recorded'
+    ]);
+  }
+  const csv='\ufeff'+rows.map(row=>row.map(approvalHistoryCsvCell).join(',')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  const link=document.createElement('a');link.href=url;
+  link.download='Malik-Polychem-Approval-History-'+isoDate(new Date())+'.csv';
+  document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  showToast(data.length+' history record(s) exported.');
+}
+
+function renderApprovalHistory() {
+  const table=document.getElementById('approvalHistoryTable');
+  if(!table) return;
+  if(!['admin','manager'].includes(currentEmployee?.role)) {table.innerHTML='';return;}
+  const data=getFilteredApprovalHistory();
   if(!data.length) {table.innerHTML='<tr><td colspan="10"><div class="empty-state">No approval history found.</div></td></tr>';return;}
   table.innerHTML=data.map(leave=>{
     const employee=leave.employees||getEmployeeById(leave.employee_id);
