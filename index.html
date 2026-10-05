@@ -1419,6 +1419,25 @@
 
           </div>
 
+          <div class="card" style="margin-top:24px">
+            <div class="card-header">
+              <div class="card-title">Approval History</div>
+              <div style="display:flex;gap:12px;flex-wrap:wrap">
+                <input id="approvalHistorySearch" type="search" placeholder="Search employee or reason" aria-label="Search approval history" oninput="renderApprovalHistory()" style="padding:10px;border:1px solid #d1d5db;border-radius:8px">
+                <select id="approvalHistoryStatus" aria-label="Filter approval history" onchange="renderApprovalHistory()" style="padding:10px;border:1px solid #d1d5db;border-radius:8px">
+                  <option value="all">All decisions</option><option value="approved">Fully approved</option>
+                  <option value="partial">Partially approved</option><option value="rejected">Rejected</option>
+                </select>
+              </div>
+            </div>
+            <p style="padding:0 20px;color:#6b7280">Admin: all decisions. Manager: your team's requests and decisions made by you.</p>
+            <div class="table-wrapper"><table><thead><tr>
+              <th>Employee</th><th>Leave Type</th><th>Requested Period</th><th>Decision</th>
+              <th>Approved Dates</th><th>Rejected Dates</th><th>Rejection Reason</th>
+              <th>Alternate Number</th><th>Decision By</th><th>Decision Time</th>
+            </tr></thead><tbody id="approvalHistoryTable"></tbody></table></div>
+          </div>
+
         </div>
 
 
@@ -4513,6 +4532,7 @@ async function notifyApprovers(fromDate, toDate, totalDays) {
 }
 
 function renderApprovals() {
+  renderApprovalHistory();
 
   const table =
     document.getElementById("approvalsTable");
@@ -4756,6 +4776,8 @@ async function rejectLeave(id) {
   if (currentUser?.demo) {
 
     leave.status = "rejected";
+    leave.approved_by = currentEmployee.id;
+    leave.approved_at = new Date().toISOString();
 
     leave.rejection_reason =
       reason;
@@ -4769,19 +4791,9 @@ async function rejectLeave(id) {
   }
 
 
-  const { error } =
-    await supabaseClient
-      .from("leave_requests")
-      .update({
-
-        status: "rejected",
-
-        rejection_reason:
-          reason
-
-      })
-      .eq("id", id)
-      .eq("status", "pending");
+  const { error } = await supabaseClient.rpc('review_leave_dates', {
+    p_id: id, p_dates: [], p_reason: reason.trim()
+  });
 
 
   if (error) {
@@ -7918,6 +7930,49 @@ function exportCSV(
 <button id="reviewSave" class="btn btn-success" type="submit">Save decision</button></div>
 </form></dialog>
 <script>
+
+function canViewLeaveDecision(leave) {
+  const me=currentEmployee;
+  if(!me || !['approved','rejected'].includes(leave.status)) return false;
+  if(me.role==='admin') return true;
+  if(me.role!=='manager') return false;
+  return leave.approved_by===me.id || getEmployeeById(leave.employee_id)?.reporting_manager_id===me.id;
+}
+function renderApprovalHistory() {
+  const table=document.getElementById('approvalHistoryTable');
+  if(!table) return;
+  if(!['admin','manager'].includes(currentEmployee?.role)) {table.innerHTML='';return;}
+  const search=(document.getElementById('approvalHistorySearch')?.value||'').trim().toLowerCase();
+  const status=document.getElementById('approvalHistoryStatus')?.value||'all';
+  const data=leaves.filter(canViewLeaveDecision).filter(leave=>{
+    const partial=leave.status==='approved' && !!leave.rejected_dates?.length;
+    if(status==='partial' && !partial) return false;
+    if(status==='approved' && (leave.status!=='approved'||partial))return false;
+    if(status==='rejected' && leave.status!=='rejected')return false;
+    const employee=leave.employees||getEmployeeById(leave.employee_id);
+    return [employee?.full_name,leave.reason,leave.rejection_reason,leave.alternate_number].join(' ').toLowerCase().includes(search);
+  }).sort((a,b)=>String(b.approved_at||b.created_at||'').localeCompare(String(a.approved_at||a.created_at||'')));
+  if(!data.length) {table.innerHTML='<tr><td colspan="10"><div class="empty-state">No approval history found.</div></td></tr>';return;}
+  table.innerHTML=data.map(leave=>{
+    const employee=leave.employees||getEmployeeById(leave.employee_id);
+    const period=formatDate(leave.from_date)+' – '+formatDate(leave.to_date);
+    const approved=leave.approved_dates?.length ? leave.approved_dates.map(formatDate).join(', ')
+      : leave.status==='approved' ? 'Full request: '+period : '—';
+    const rejected=leave.rejected_dates?.length ? leave.rejected_dates.map(formatDate).join(', ')
+      : leave.status==='rejected' ? 'Full request: '+period : '—';
+    return `<tr>
+      <td>${escapeHtml(employee?.full_name||'Unknown employee')}</td>
+      <td>${escapeHtml(leave.leave_types?.name||getLeaveTypeName(leave.leave_type_id))}</td>
+      <td>${period}<span class="leave-detail">Requested: ${Number(leave.requested_total_days??leave.total_days)} day(s)</span></td>
+      <td>${leaveStatusBadge(leave)}</td><td>${approved}</td><td>${rejected}</td>
+      <td>${escapeHtml(leave.rejection_reason||'—')}</td>
+      <td>${escapeHtml(leave.alternate_number||'—')}</td>
+      <td>${escapeHtml(leave.approved_by ? getEmployeeName(leave.approved_by) : 'Not recorded')}</td>
+      <td>${leave.approved_at ? formatDateTime(leave.approved_at) : 'Not recorded'}</td>
+    </tr>`;
+  }).join('');
+}
+
 function leaveCoversDate(leave, date) {
   return Array.isArray(leave.approved_dates)
     ? leave.approved_dates.includes(date)
@@ -7973,6 +8028,7 @@ async function saveLeaveReview(event) {
     if(currentUser?.demo) {
       Object.assign(leave,{status:selected.length?'approved':'rejected', approved_dates:selected,
         rejected_dates:rejected, rejection_reason:reason||null,
+        approved_by:currentEmployee.id, approved_at:new Date().toISOString(),
         total_days:selected.length*(leave.duration_type==='full_day'?1:0.5)});
       renderApprovals(); renderMyLeaves();
     } else {
