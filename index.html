@@ -842,6 +842,13 @@
 .review-dates label{display:flex;align-items:center;gap:10px;padding:10px;background:#f3f4f6;border-radius:8px}
 .review-dialog textarea{width:100%;min-height:90px;margin:10px 0}.review-dialog .form-actions{gap:16px;flex-wrap:wrap}
 @media(max-width:600px){#approvalsTable td:last-child .btn{display:block;margin:12px 0;width:100%}.review-dates{grid-template-columns:1fr}}
+
+.date-with-calendar{position:relative;display:flex;align-items:center;width:100%}
+.date-with-calendar>input:first-child{width:100%;padding-right:54px!important}
+.date-calendar-label{position:absolute;right:0;top:0;bottom:0;width:48px;display:flex;align-items:center;justify-content:center;background:#eef2f7;border-radius:0 8px 8px 0;font-size:21px;pointer-events:none}
+.date-native-picker{position:absolute!important;right:0!important;top:0!important;width:48px!important;height:100%!important;opacity:0;cursor:pointer;padding:0!important;border:0!important}
+.date-native-picker::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;cursor:pointer}
+.date-with-calendar:focus-within{outline:2px solid #2563eb;outline-offset:2px;border-radius:8px}
 </style><link rel="manifest" href="./manifest.webmanifest"><meta name="theme-color" content="#173f70"></head>
 
 <body>
@@ -8002,6 +8009,29 @@ document.querySelectorAll('input[type="date"]').forEach(input=>{
     set(value){nativeValue.set.call(this,value?formatDate(value):'');}
   });
   input.value=initial;
+  const wrapper=document.createElement('div'); wrapper.className='date-with-calendar';
+  input.parentNode.insertBefore(wrapper,input); wrapper.appendChild(input);
+  const icon=document.createElement('span'); icon.className='date-calendar-label';
+  icon.textContent='📅'; icon.setAttribute('aria-hidden','true'); wrapper.appendChild(icon);
+  const picker=document.createElement('input'); picker.type='date'; picker.className='date-native-picker';
+  picker.setAttribute('aria-label','Choose '+(input.labels?.[0]?.textContent||'date')+' from calendar');
+  picker.title='Choose date from calendar'; wrapper.appendChild(picker);
+  function syncPicker(){picker.value=input.value; picker.disabled=input.disabled; picker.min=input.min; picker.max=input.max;}
+  syncPicker();
+  picker.addEventListener('click',()=>{
+    syncPicker();
+    if(!picker.disabled && picker.showPicker) {try {picker.showPicker();} catch(e) { /* native click remains available */ }}
+  });
+  picker.addEventListener('keydown',event=>{
+    if((event.key==='Enter'||event.key===' ') && picker.showPicker){event.preventDefault();syncPicker();try{picker.showPicker();}catch(e){}}
+  });
+  picker.addEventListener('change',()=>{
+    input.value=picker.value; input.setCustomValidity('');
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  new MutationObserver(syncPicker).observe(input,{attributes:true,attributeFilter:['disabled','min','max']});
+  input.form?.addEventListener('reset',()=>queueMicrotask(()=>{input.setCustomValidity('');syncPicker();}));
   input.addEventListener('input',()=>{
     const raw=nativeValue.get.call(input);
     input.setCustomValidity(raw && !input.value?'Enter a valid date as DD/MM/YYYY':'');
