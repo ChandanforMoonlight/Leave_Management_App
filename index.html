@@ -849,6 +849,9 @@
 .date-native-picker{position:absolute!important;right:0!important;top:0!important;width:48px!important;height:100%!important;opacity:0;cursor:pointer;padding:0!important;border:0!important}
 .date-native-picker::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;cursor:pointer}
 .date-with-calendar:focus-within{outline:2px solid #2563eb;outline-offset:2px;border-radius:8px}
+
+.dashboard-leave-actions{min-width:220px}.dashboard-leave-actions .btn{margin:6px 12px 6px 0;min-height:44px}
+@media(max-width:600px){.dashboard-leave-actions .btn{display:block;width:100%;margin:12px 0}}
 </style><link rel="manifest" href="./manifest.webmanifest"><meta name="theme-color" content="#173f70"></head>
 
 <body>
@@ -1056,7 +1059,7 @@
 
         <div id="page-dashboard" class="page active">
 
-          <div class="stats-grid">
+          <div id="dashboardStats" class="stats-grid" style="display:none">
 
             <div class="stat-card stat-blue">
               <div class="stat-label">Total Leave Days</div>
@@ -1081,16 +1084,16 @@
           </div>
 
 
-          <div class="dashboard-grid">
+          <div id="dashboardGrid" class="dashboard-grid">
 
             <div class="card">
 
               <div class="card-header">
-                <div class="card-title">Recent Leave Requests</div>
+                <div id="dashboardRequestsTitle" class="card-title">Recent Leave Requests</div>
 
                 <button
                   class="btn btn-primary btn-sm"
-                  onclick="showPage('myLeaves')"
+                  id="dashboardViewAll" onclick="showPage(currentEmployee?.role === 'employee' ? 'myLeaves' : 'approvals')"
                 >
                   View All
                 </button>
@@ -1100,7 +1103,7 @@
 
                 <table>
 
-                  <thead>
+                  <thead id="dashboardLeavesHead">
                     <tr>
                       <th>Leave Type</th>
                       <th>From</th>
@@ -6081,157 +6084,67 @@ async function deleteHoliday(id) {
    DASHBOARD
 ========================================================= */
 
+
+function getDashboardLeaveScope() {
+  const me=currentEmployee;
+  if(!me) return [];
+  if(me.role==='admin') return leaves;
+  if(me.role==='manager') return leaves.filter(l=>getEmployeeById(l.employee_id)?.reporting_manager_id===me.id);
+  return leaves.filter(l=>l.employee_id===me.id);
+}
+function dashboardLeaveTotals(data) {
+  return data.reduce((total,leave)=>{
+    const requested=Number(leave.requested_total_days??leave.total_days??0);
+    const unit=leave.duration_type==='full_day'?1:0.5;
+    total.total+=requested;
+    if(leave.status==='approved') {
+      total.approved+=Number(leave.total_days||0);
+      total.rejected+=(leave.rejected_dates?.length||0)*unit;
+    }
+    if(leave.status==='pending')total.pending+=requested;
+    if(leave.status==='rejected')total.rejected+=requested;
+    return total;
+  },{total:0,approved:0,pending:0,rejected:0});
+}
 function renderDashboard() {
-
-  if (!currentEmployee) return;
-
-
-  const myLeaves =
-    leaves.filter(function (leave) {
-
-      return (
-        leave.employee_id ===
-        currentEmployee.id
-      );
-
-    });
-
-
-  const total =
-    myLeaves.reduce(
-      (sum, leave) =>
-        sum + Number(leave.total_days || 0),
-      0
-    );
-
-
-  const approved =
-    myLeaves
-      .filter(x => x.status === "approved")
-      .reduce(
-        (sum, leave) =>
-          sum + Number(leave.total_days || 0),
-        0
-      );
-
-
-  const pending =
-    myLeaves
-      .filter(x => x.status === "pending")
-      .reduce(
-        (sum, leave) =>
-          sum + Number(leave.total_days || 0),
-        0
-      );
-
-
-  const rejected =
-    myLeaves
-      .filter(x => x.status === "rejected")
-      .reduce(
-        (sum, leave) =>
-          sum + Number(leave.total_days || 0),
-        0
-      );
-
-
-  document.getElementById("statTotal").textContent =
-    total;
-
-  document.getElementById("statApproved").textContent =
-    approved;
-
-  document.getElementById("statPending").textContent =
-    pending;
-
-  document.getElementById("statRejected").textContent =
-    rejected;
-
-
-  renderDashboardLeaves(myLeaves);
-
-  renderDashboardBalances();
-
+  if(!currentEmployee)return;
+  const managerView=['manager','admin'].includes(currentEmployee.role);
+  document.getElementById('dashboardStats').style.display=managerView?'grid':'none';
+  document.getElementById('dashboardRequestsTitle').textContent=managerView?'Employee Leave Requests':'Recent Leave Requests';
+  document.getElementById('dashboardViewAll').textContent=managerView?'Approvals & History':'View All';
+  document.getElementById('dashboardGrid').style.gridTemplateColumns=managerView?'minmax(0,1fr)':'';
+  const data=getDashboardLeaveScope();
+  const totals=dashboardLeaveTotals(data);
+  document.getElementById('statTotal').textContent=totals.total;
+  document.getElementById('statApproved').textContent=totals.approved;
+  document.getElementById('statPending').textContent=totals.pending;
+  document.getElementById('statRejected').textContent=totals.rejected;
+  renderDashboardLeaves(data);renderDashboardBalances();
 }
-
-
-/* =========================================================
-   DASHBOARD RECENT LEAVES
-========================================================= */
-
 function renderDashboardLeaves(data) {
-
-  const table =
-    document.getElementById(
-      "dashboardLeavesTable"
-    );
-
-
-  const recent =
-    data.slice(0, 5);
-
-
-  if (recent.length === 0) {
-
-    table.innerHTML = `
-      <tr>
-        <td colspan="5">
-          <div class="empty-state">
-            No leave requests yet.
-          </div>
-        </td>
-      </tr>
-    `;
-
-    return;
-
-  }
-
-
-  table.innerHTML =
-    recent.map(function (leave) {
-
-      return `
-        <tr>
-
-          <td>
-            ${escapeHtml(
-              leave.leave_types?.name ||
-              getLeaveTypeName(
-                leave.leave_type_id
-              )
-            )}
-          </td>
-
-          <td>
-            ${formatDate(
-              leave.from_date
-            )}
-          </td>
-
-          <td>
-            ${formatDate(
-              leave.to_date
-            )}
-          </td>
-
-          <td>
-            ${leave.total_days}
-          </td>
-
-          <td>
-            ${statusBadge(
-              leave.status
-            )}
-          </td>
-
-        </tr>
-      `;
-
-    }).join("");
-
+  const table=document.getElementById('dashboardLeavesTable');
+  const managerView=['manager','admin'].includes(currentEmployee?.role);
+  const headers=managerView?['Employee','Leave Type','From','To','Days','Reason / Contact','Status','Action']:['Leave Type','From','To','Days','Status'];
+  document.getElementById('dashboardLeavesHead').innerHTML='<tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr>';
+  const recent=managerView
+    ?data.filter(l=>l.status==='pending' && canActOnLeave(l)).sort((a,b)=>String(a.created_at||'').localeCompare(String(b.created_at||'')))
+    :[...data].sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||''))).slice(0,5);
+  if(!recent.length){table.innerHTML=`<tr><td colspan="${headers.length}"><div class="empty-state">${managerView?'No employee requests awaiting your approval.':'No leave requests yet.'}</div></td></tr>`;return;}
+  table.innerHTML=recent.map(leave=>{
+    const employee=leave.employees||getEmployeeById(leave.employee_id);
+    return `<tr>
+      ${managerView?'<td>'+escapeHtml(employee?.full_name||'Unknown employee')+'</td>':''}
+      <td>${escapeHtml(leave.leave_types?.name||getLeaveTypeName(leave.leave_type_id))}</td>
+      <td>${formatDate(leave.from_date)}</td><td>${formatDate(leave.to_date)}</td><td>${Number(leave.total_days||0)}</td>
+      ${managerView?'<td>'+escapeHtml(leave.reason||'-')+leaveDetails(leave)+'</td>':''}
+      <td>${leaveStatusBadge(leave)}</td>
+      ${managerView?`<td class="dashboard-leave-actions">
+        <button class="btn btn-success btn-sm" onclick="openLeaveReview('${leave.id}')">Review / Approve</button>
+        <button class="btn btn-danger btn-sm" onclick="rejectLeave('${leave.id}')">Reject</button>
+      </td>`:''}
+    </tr>`;
+  }).join('');
 }
-
 
 /* =========================================================
    DASHBOARD BALANCES
