@@ -1294,7 +1294,7 @@
 
               <button
                 class="btn btn-primary"
-                onclick="showPage('applyLeave')"
+                onclick="startNewLeave()"
               >
                 + Apply Leave
               </button>
@@ -3136,6 +3136,7 @@ async function loadEmployees() {
 
 
   employees = data || [];
+  employeeManagerColumn = employees.some(e => Object.hasOwn(e, "manager_id")) ? "manager_id" : "reporting_manager_id";
 
 }
 
@@ -3962,6 +3963,8 @@ function calculateLeaveDays(
    SUBMIT LEAVE
 ========================================================= */
 
+let editingLeaveId = null;
+let editingLeaveSnapshot = null;
 async function submitLeave(event) {
 
   event.preventDefault();
@@ -4058,6 +4061,11 @@ async function submitLeave(event) {
 
   }
 
+
+  if (editingLeaveId) {
+    await submitLeaveModification({leaveTypeId, durationType, fromDate, toDate, totalDays, reason, alternateNumber});
+    return;
+  }
 
   /*
     Demo mode
@@ -4312,7 +4320,7 @@ function renderMyLeaves() {
           </td>
 
           <td>
-
+            ${canModifyOwnLeave(leave) ? `<button class="btn btn-primary btn-sm" onclick="beginModifyLeave('${leave.id}')" style="margin:6px 12px 6px 0;min-height:44px">Modify</button>` : ''}
             ${
               leave.status === "pending"
                 ? `
@@ -4451,6 +4459,10 @@ function getActiveAdmins() {
 
 }
 
+let employeeManagerColumn = 'reporting_manager_id';
+function getReportingManagerId(employee) {
+  return employee?.manager_id ?? employee?.reporting_manager_id ?? null;
+}
 function canActOnLeave(leave) {
 
   const me = currentEmployee;
@@ -4482,7 +4494,7 @@ function canActOnLeave(leave) {
 
     return (
       !!requester &&
-      requester.reporting_manager_id === me.id
+      getReportingManagerId(requester) === me.id
     );
 
   }
@@ -4498,9 +4510,9 @@ async function notifyApprovers(fromDate, toDate, totalDays) {
 
   let recipients = [];
 
-  if (me.reporting_manager_id) {
+  if (getReportingManagerId(me)) {
 
-    const manager = getEmployeeById(me.reporting_manager_id);
+    const manager = getEmployeeById(getReportingManagerId(me));
 
     if (
       manager &&
@@ -4582,8 +4594,8 @@ function renderApprovals() {
         getEmployeeById(leave.employee_id);
 
       const managerName =
-        requester?.reporting_manager_id
-          ? getEmployeeName(requester.reporting_manager_id)
+        getReportingManagerId(requester)
+          ? getEmployeeName(getReportingManagerId(requester))
           : "— (Admin)";
 
       const typeName =
@@ -4928,7 +4940,7 @@ function renderEmployees() {
         <td>${escapeHtml(employee.email || "-")}</td>
         <td>${escapeHtml(employee.department || "-")}</td>
         <td>${escapeHtml(employee.designation || "-")}</td>
-        <td>${escapeHtml(getEmployeeName(employee.reporting_manager_id))}</td>
+        <td>${escapeHtml(getEmployeeName(getReportingManagerId(employee)))}</td>
         <td>${escapeHtml(employee.location || "-")}</td>
         <td>${escapeHtml(employee.employment_type || "-")}</td>
         <td>${escapeHtml(employee.role || "-")}</td>
@@ -5075,7 +5087,7 @@ async function openEmployeeModal(employeeId) {
 
   fillManagerOptions(
     editingEmployeeId,
-    employee ? employee.reporting_manager_id : null
+    employee ? getReportingManagerId(employee) : null
   );
 
   if (employee) {
@@ -5254,7 +5266,7 @@ async function submitEmployee(event) {
     designation: val("employeeDesignation"),
     role: role,
     joining_date: document.getElementById("employeeJoiningDate").value || null,
-    reporting_manager_id: managerId,
+    [employeeManagerColumn]: managerId,
     location: val("employeeLocation") || null,
     employment_type: document.getElementById("employeeType").value,
     status: status
@@ -6089,7 +6101,7 @@ function getDashboardLeaveScope() {
   const me=currentEmployee;
   if(!me) return [];
   if(me.role==='admin') return leaves;
-  if(me.role==='manager') return leaves.filter(l=>getEmployeeById(l.employee_id)?.reporting_manager_id===me.id);
+  if(me.role==='manager') return leaves.filter(l=>getReportingManagerId(getEmployeeById(l.employee_id))===me.id);
   return leaves.filter(l=>l.employee_id===me.id);
 }
 function dashboardLeaveTotals(data) {
@@ -7429,7 +7441,11 @@ function checkLeavePolicy(leaveTypeId, fromDate, totalDays) {
   const pending =
     getPendingDays(currentEmployee.id, type.id, fy);
 
-  const available = entitlement - used - pending;
+  const old = editingLeaveId ? leaves.find(l => l.id === editingLeaveId) : null;
+  const released = old && old.employee_id === currentEmployee.id && old.leave_type_id === type.id &&
+    getFinancialYearFor(old.from_date) === fy && old.status==='pending'
+    ? Number(old.total_days || 0) : 0;
+  const available = entitlement - used - pending + released;
 
   const finalBalance = available - totalDays;
 
@@ -7850,12 +7866,12 @@ function canViewLeaveDecision(leave) {
   if(!me || !['approved','rejected'].includes(leave.status)) return false;
   if(me.role==='admin') return true;
   if(me.role!=='manager') return false;
-  return leave.approved_by===me.id || getEmployeeById(leave.employee_id)?.reporting_manager_id===me.id;
+  return leave.approved_by===me.id || getReportingManagerId(getEmployeeById(leave.employee_id))===me.id;
 }
 function getFilteredApprovalHistory() {
   const search=(document.getElementById('approvalHistorySearch')?.value||'').trim().toLowerCase();
   const status=document.getElementById('approvalHistoryStatus')?.value||'all';
-  return leaves.filter(canViewLeaveDecision).filter(leave=>{
+  return approvalHistoryEntries().filter(canViewLeaveDecision).filter(leave=>{
     const partial=leave.status==='approved' && !!leave.rejected_dates?.length;
     if(status==='partial' && !partial) return false;
     if(status==='approved' && (leave.status!=='approved'||partial))return false;
@@ -7940,6 +7956,8 @@ function leaveDetails(leave) {
   if (leave.approved_dates) detail += '<span class="leave-detail">Approved dates: '+leave.approved_dates.map(formatDate).join(', ')+'</span>';
   if (leave.rejected_dates?.length) detail += '<span class="leave-detail">Rejected dates: '+leave.rejected_dates.map(formatDate).join(', ')+'</span>';
   if (leave.rejection_reason) detail += '<span class="leave-detail">Rejection reason: '+escapeHtml(leave.rejection_reason)+'</span>';
+  if(leave.modification_history?.length) detail += modificationHistoryMarkup(leave);
+  if(leave.history_revision) detail += '<span class="leave-detail">Previous decision — request subsequently modified</span>';
   return detail;
 }
 function requestWorkingDates(leave) {
@@ -8053,5 +8071,90 @@ document.querySelectorAll('input[type="date"]').forEach(input=>{
 if('serviceWorker' in navigator && location.protocol==='https:') {
   navigator.serviceWorker.register('./sw.js').catch(console.error);
 }
+</script><script>
+function canModifyOwnLeave(leave) {
+  return !!currentEmployee && leave.employee_id===currentEmployee.id && leave.status==='pending';
+}
+function resetLeaveEditing() {
+  editingLeaveId=null;editingLeaveSnapshot=null;
+  const attachment=document.getElementById('leaveAttachment');if(attachment)attachment.disabled=false;
+  document.getElementById('leaveEditBanner')?.remove();
+  const button=document.querySelector('#leaveForm button[type="submit"]');
+  if(button) {button.textContent=button.dataset.originalLabel||'Submit Leave';button.disabled=false;}
+}
+function startNewLeave(){document.getElementById('leaveForm').reset();resetLeaveEditing();updateDateRules();showPage('applyLeave');}
+function beginModifyLeave(id) {
+  const leave=leaves.find(l=>l.id===id);
+  if(!leave||!canModifyOwnLeave(leave)){showToast('You can modify only your own pending leave.');return;}
+  document.getElementById('leaveForm').reset();
+  editingLeaveId=id;editingLeaveSnapshot=JSON.parse(JSON.stringify(leave));
+  const attachment=document.getElementById('leaveAttachment');if(attachment)attachment.disabled=true;
+  showPage('applyLeave');
+  document.getElementById('leaveType').value=leave.leave_type_id;
+  document.getElementById('durationType').value=leave.duration_type;
+  document.getElementById('fromDate').value=leave.from_date;
+  document.getElementById('toDate').value=leave.to_date;
+  document.getElementById('leaveReason').value=leave.reason||'';
+  document.getElementById('alternateNumber').value=leave.alternate_number||'';
+  updateDateRules();
+  const banner=document.createElement('div');banner.id='leaveEditBanner';
+  banner.style.cssText='background:#eff6ff;padding:16px;border-radius:8px;margin-bottom:16px';
+  banner.innerHTML='<strong>Modify existing leave</strong><p>You can edit this pending request. It will remain pending after saving.</p><button type="button" class="btn btn-secondary btn-sm" onclick="startNewLeave();showPage(\'myLeaves\')">Cancel editing</button>';
+  document.getElementById('leaveForm').prepend(banner);
+  const button=document.querySelector('#leaveForm button[type="submit"]');
+  if(button){button.dataset.originalLabel ||= button.textContent.trim();button.textContent='Save Changes';}
+}
+function leaveRevisionSnapshot(leave){
+  const keys=['from_date','to_date','duration_type','leave_type_id','total_days','reason','alternate_number','status','approved_by','approved_at','approved_dates','rejected_dates','rejection_reason','requested_total_days'];
+  return Object.fromEntries(keys.map(k=>[k,leave[k]??null]));
+}
+function approvalHistoryEntries(){
+  const entries=[];
+  for(const leave of leaves){
+    entries.push(leave);
+    for(const revision of leave.modification_history||[]){
+      if(['approved','rejected'].includes(revision.before?.status))entries.push({...leave,...revision.before,history_revision:true,modification_history:[]});
+    }
+  }
+  return entries;
+}
+function modificationHistoryMarkup(leave){
+  return '<details class="leave-detail"><summary>Modification history ('+leave.modification_history.length+')</summary>'+
+    leave.modification_history.map(r=>'<p>'+formatDateTime(r.modified_at)+' — '+escapeHtml(r.modified_by_name||'Request owner')+
+      ': '+formatDate(r.before?.from_date)+' to '+formatDate(r.before?.to_date)+' ('+Number(r.before?.total_days||0)+' days, '+escapeHtml(r.before?.status||'')+') → '+
+      formatDate(r.after?.from_date)+' to '+formatDate(r.after?.to_date)+' ('+Number(r.after?.total_days||0)+' days, pending)</p>').join('')+'</details>';
+}
+async function submitLeaveModification(values){
+  const old=editingLeaveSnapshot;
+  if(!old||!canModifyOwnLeave(old)){showToast('This leave cannot be modified.');return;}
+  const after={leave_type_id:values.leaveTypeId,duration_type:values.durationType,from_date:values.fromDate,to_date:values.toDate,total_days:values.totalDays,reason:values.reason,alternate_number:values.alternateNumber||null};
+  if(Object.entries(after).every(([key,value])=>(old[key]??null)===(value??null))){showToast('No changes to save.');return;}
+  const button=document.querySelector('#leaveForm button[type="submit"]');if(button)button.disabled=true;
+  let saved=false;
+  try{
+    if(currentUser?.demo){
+      const current=leaves.find(l=>l.id===old.id);
+      current.modification_history=[...(current.modification_history||[]),{modified_at:new Date().toISOString(),modified_by_name:currentEmployee.full_name,before:leaveRevisionSnapshot(current),after}];
+      Object.assign(current,after,{status:'pending',approved_dates:null,rejected_dates:null,rejection_reason:null,approved_by:null,approved_at:null,requested_total_days:null});
+    }else{
+      const {error}=await supabaseClient.rpc('modify_own_leave',{
+        p_id:old.id,p_changes:after,p_expected:leaveRevisionSnapshot(old),p_revision:old.modification_count||0
+      });
+      if(error)throw error;
+    }
+    saved=true;
+    if(!currentUser?.demo){
+      await notifyApprovers(values.fromDate,values.toDate,values.totalDays);
+      await createAuditLog(currentEmployee.id,'UPDATE','Leave','Leave modified: '+formatDate(old.from_date)+' to '+formatDate(old.to_date)+' → '+formatDate(values.fromDate)+' to '+formatDate(values.toDate));
+    }
+    document.getElementById('leaveForm').reset();resetLeaveEditing();updateDateRules();
+    if(!currentUser?.demo)await loadAllData();
+    showPage('myLeaves');renderMyLeaves();showToast('Changes saved. Leave remains pending.');
+  }catch(error){
+    if(saved){resetLeaveEditing();await loadAllData();showPage('myLeaves');showToast('Leave saved; notification refresh failed. Please reload.');}
+    else showToast('Unable to modify: '+error.message);
+  }finally{if(button)button.disabled=false;}
+}
+document.getElementById('leaveForm').addEventListener('reset',resetLeaveEditing);
 </script></body>
 </html>
